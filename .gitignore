@@ -1,0 +1,14 @@
+# Paid product files and anything that could carry real data stay out of this public repo.
+*.xlsx
+*.xls
+*.ods
+*.zip
+*.csv
+.env
+.env.*
+*credentials*
+*secret*
+*token*
+__pycache__/
+.DS_Store
+node_modules/
