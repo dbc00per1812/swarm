@@ -60,6 +60,13 @@ Google Sheets row rereads and a `rev` field do **not** provide atomic compare-an
 
 `done` requires the observable acceptance check, artifact/evidence reference and any named review or release gate. `cancelled` keeps the reason and history. A wait records the dependency owner and next checkpoint; do not silently abandon it.
 
+### Estimates and early evidence
+
+- Separate estimated active work time from dependency, polling, approval and scheduled-wake waits. State assumptions and an honest range; use unknown when the work has not been tested.
+- Start with a short, evidence-producing checkpoint, preferably in the current active run when feasible, rather than an unsupported multi-day promise. Name the first verifiable result and next supported check-in; do not invent an immediate wake or deadline.
+- Re-estimate after the first measured attempt and when scope or dependencies change. Function leads should challenge long estimates that lack evidence, break work into smaller useful steps, and avoid adding arbitrary padding to peer handoffs.
+- Preserve required QA, review and safety checks. Faster checkpoints do not justify false certainty, skipping validation or declaring completion early. Report material timing changes without repeated status chatter.
+
 ## Swarm Protocol v1 and reliable discovery
 
 Use one canonical task thread where practical. Post only a material TASK, CLAIM, RESULT, BLOCK, REQUEST, SIGNAL, METRIC, EXPERIMENT, DECISION, HANDOFF, ARTIFACT, LEARNING, ERROR or ESCALATION. A BLOCKED event is accepted as BLOCK during migration.
