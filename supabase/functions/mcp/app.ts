@@ -4,8 +4,13 @@ import {
   McpServer,
 } from "npm:@modelcontextprotocol/server@2.0.0";
 import { z } from "npm:zod@4.6.5";
+import {
+  gmailConfigured,
+  registerServices,
+  type ServiceConfig,
+} from "./services.ts";
 
-export interface AppConfig {
+export interface AppConfig extends ServiceConfig {
   accessToken?: string;
   githubToken?: string;
   githubRepositories?: string[];
@@ -68,6 +73,9 @@ export function createApp(config: AppConfig, fetcher: Fetcher = fetch) {
           github: Boolean(
             config.githubToken && config.githubRepositories?.length,
           ),
+          slack: Boolean(config.slackToken),
+          linear: Boolean(config.linearToken),
+          gmail: gmailConfigured(config),
         }),
     );
 
@@ -140,6 +148,7 @@ export function createApp(config: AppConfig, fetcher: Fetcher = fetch) {
         );
       }
     });
+    registerServices(server, config, fetcher);
     return server;
   });
 

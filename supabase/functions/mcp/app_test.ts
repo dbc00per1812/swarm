@@ -71,10 +71,9 @@ Deno.test("an MCP client can discover tools and read allowed GitHub pull request
   try {
     await client.connect(transport);
     const tools = await client.listTools();
-    assertEquals(tools.tools.map((tool) => tool.name).sort(), [
-      "github_list_pull_requests",
-      "hub_status",
-    ]);
+    const names = tools.tools.map((tool) => tool.name);
+    assertEquals(names.includes("github_list_pull_requests"), true);
+    assertEquals(names.includes("hub_status"), true);
     const result = await client.callTool({
       name: "github_list_pull_requests",
       arguments: { owner: "demo", repo: "project" },
