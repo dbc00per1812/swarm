@@ -1,0 +1,6 @@
+project_id = "swarm"
+
+[functions.mcp]
+# The handler checks a separate bearer credential before it processes MCP requests.
+verify_jwt = false
+entrypoint = "./functions/mcp/index.ts"
