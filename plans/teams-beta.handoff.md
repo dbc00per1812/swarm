@@ -147,6 +147,43 @@ helpers before use. Never print access files or raw credential responses. Use
 disposable fixtures and rollback transactions. Never reset the hosted database.
 No Docker, Supabase CLI, or `psql` is available. The Management API works.
 
+## Increment 1 result
+
+Increment 1 is complete. See `plans/teams-beta.increment1.md` for the management
+API contract, permission controls, review results, and verification limits.
+Implementation commit: `d0916dc02b8d75835735454cf470f95b16740de5`.
+Draft team pull request: `https://github.com/dbc00per1812/swarm/pull/5`.
+Its base is `feature/swarm-mcp-poc`; its head is `feature/swarm-teams`.
+Keep this pull request as a draft during the remaining increments.
+
+The additive migration is `20261015220000_lightweight_teams.sql`. The team API
+uses `teams.ts` through `beta-gateway.ts`. The server-only database function is
+`swarm_team_manage(uuid,text,uuid,jsonb)`. It enforces organization membership,
+owner controls, invitation acceptance, and selected-tool sharing in transactions.
+
+All 49 gateway tests and 13 page tests pass. Hosted rollback checks pass 41 team,
+26 storage, 12 import, and 12 OAuth assertions. Type checks, lint, formatting,
+builds, and whitespace checks pass. Independent source, TypeScript, security,
+and database reviews found no remaining material issue. The audit-permission
+finding was fixed and has a failing mutation check.
+
+No team migration, gateway, or website deployment occurred. Production remains
+on the reviewed Connections release. A read-only count check confirms four
+personal connections, one active key, and no pending authorizations. The team
+tables are absent after rollback. Shared MCP execution remains unavailable.
+Pull request 4 remains a draft. Named approval and the open private credential
+incident remain separate release limits.
+
 ## Next action
 
-Implement increment 1 in the next chat. No team source code exists yet.
+Start increment 2 in a new chat in the saved THESWARM project.
+Project ID: `e0463b41-a2f0-42ee-bbe2-2dcbeed54e25`. Use this same
+worktree and `feature/swarm-teams`. Read this handoff first. Implement the shared
+MCP access requirements above. Keep personal connection routes restricted to
+the owner. Reuse the safe organization detail projection for shared metadata.
+
+The current API stores grants but does not use them during MCP execution.
+Credential and catalog grant withdrawal remains increment 2 work. Keep the
+organization lock and connection lock order consistent during conflicting writes.
+After increment 2, commit and push its changes, update this handoff, and create
+the requested increment 3 chat automatically. Do not require a manual restart.
