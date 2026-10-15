@@ -26,6 +26,8 @@ import {
   UserStore,
 } from "./user-store.ts";
 
+import { createTeamRoutes } from "./teams.ts";
+
 export interface BetaConfig extends OAuthConfig {
   projectUrl: string;
   anonKey: string;
@@ -114,6 +116,7 @@ export function createBetaGateway(
   fetcher: typeof fetch = fetch,
 ) {
   const oauth = providerOAuth(config, fetcher);
+  const teams = createTeamRoutes(store, config.uiUrl);
   const origin = new URL(config.uiUrl).origin;
   const base = new URL(config.endpointUrl).pathname.replace(/\/$/, "");
   const counts = new Map<string, { until: number; count: number }>();
@@ -442,6 +445,10 @@ export function createBetaGateway(
       }
       const user = await identity(request);
       rate(`api:${user}`, 60);
+      const teamResponse = await teams(path, request, user, input);
+      if (teamResponse) {
+        return reply(teamResponse.body, teamResponse.status, cors);
+      }
       if (path === "/v1/oauth/complete" && request.method === "POST") {
         const value = z.object({
           provider: providerSchema,
