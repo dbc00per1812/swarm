@@ -125,6 +125,11 @@ Supabase email sign-in. It keeps the browser access token in memory and clears
 it from the address bar. Reloading the page requires another sign-in.
 Provider credentials never reach the browser or the calling agent.
 
+The built-in Supabase sender allows two emails per hour for the project.
+Swarm returns HTTP 429 with an email-limit message when the sender rejects
+another request. Configure a custom email sender before wider use.
+See [Supabase Auth rate limits](https://supabase.com/docs/guides/auth/rate-limits).
+
 Register one OAuth application per provider. Set each callback to
 `https://<project-ref>.supabase.co/functions/v1/mcp/callback/<provider>`.
 Use `github`, `slack`, `linear`, or `gmail` for `<provider>`.

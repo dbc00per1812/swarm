@@ -330,12 +330,14 @@ export function createGateway(
           ),
         );
         if (input.email.toLowerCase() === config.ownerEmail.toLowerCase()) {
-          await json(
+          const delivery = await fetcher(
             `${config.projectUrl}/auth/v1/otp?redirect_to=${
               encodeURIComponent(config.uiUrl)
             }`,
             {
               method: "POST",
+              redirect: "error",
+              signal: AbortSignal.timeout(10_000),
               headers: {
                 apikey: config.anonKey,
                 "Content-Type": "application/json",
@@ -346,6 +348,18 @@ export function createGateway(
               }),
             },
           );
+          await delivery.body?.cancel();
+          if (delivery.status === 429) {
+            return reply(
+              {
+                error:
+                  "The sign-in email limit has been reached. Please try again later.",
+              },
+              429,
+              cors,
+            );
+          }
+          if (!delivery.ok) throw new Error("Email delivery failed.");
         }
         return reply(
           {

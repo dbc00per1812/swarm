@@ -2,12 +2,17 @@ import { assertEquals, assertStringIncludes } from "@std/assert";
 import { createGateway } from "./gateway.ts";
 import { ConnectionStore } from "./connection-store.ts";
 
-function fixture(providerResponse?: typeof fetch) {
+function fixture(providerResponse?: typeof fetch, otpResponse?: typeof fetch) {
   const connections: Record<string, unknown>[] = [];
   const states: Record<string, unknown>[] = [];
   const fakeFetch: typeof fetch = (input, init) => {
     const request = new Request(input, init);
     const url = new URL(request.url);
+    if (url.pathname === "/auth/v1/otp") {
+      return otpResponse
+        ? otpResponse(input, init)
+        : Promise.resolve(Response.json({}));
+    }
     if (url.pathname === "/auth/v1/user") {
       return Promise.resolve(Response.json({
         id: "owner-id",
@@ -414,10 +419,49 @@ Deno.test("a delayed refresh cannot replace a newly connected account", async ()
 
 Deno.test("Supabase internal function paths expose the same dashboard routes", async () => {
   const { app } = fixture();
-  const response = await app(new Request("http://edge-runtime/mcp/config", {
-    headers: { Origin: "https://ui.test" },
-  }));
+  const response = await app(
+    new Request("http://edge-runtime/mcp/config", {
+      headers: { Origin: "https://ui.test" },
+    }),
+  );
   assertEquals(response.status, 200);
   const body = await response.json();
   assertEquals(body.projectUrl, "https://project.test");
 });
+
+for (
+  const scenario of [
+    { upstream: 200, expected: 202, message: "sign-in link is on its way" },
+    { upstream: 429, expected: 429, message: "email limit" },
+    { upstream: 503, expected: 400, message: "could not be sent" },
+  ]
+) {
+  Deno.test(`sign-in reports email delivery status ${scenario.upstream} without exposing provider details`, async () => {
+    const { app, request } = fixture(
+      undefined,
+      () =>
+        Promise.resolve(
+          Response.json({ private_provider_detail: "hidden-mail-data" }, {
+            status: scenario.upstream,
+          }),
+        ),
+    );
+    const response = await app(
+      new Request(request("/signin", "POST"), {
+        headers: {
+          "Content-Type": "application/json",
+          Origin: "https://ui.test",
+        },
+        body: JSON.stringify({ email: "owner@example.test" }),
+      }),
+    );
+    assertEquals(response.status, scenario.expected);
+    const text = await response.text();
+    assertStringIncludes(text, scenario.message);
+    assertEquals(text.includes("hidden-mail-data"), false);
+    assertEquals(
+      response.headers.get("Access-Control-Allow-Origin"),
+      "https://ui.test",
+    );
+  });
+}
