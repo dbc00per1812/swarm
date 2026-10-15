@@ -2,124 +2,172 @@
 
 ## Current increment
 
-Increment 1 added user-owned connection storage. Increment 2 is the gateway.
-Increment 3 is the website and release setup. The user requested a fresh chat
-after each increment. Continue automatically until the complete product works.
-Keep the implementation small and preserve the existing personal agent
-connection.
+Increments 1 and 2 are complete, deployed, and verified. Increment 3 must finish
+the Connections website and release setup. The user requested a fresh chat after
+each increment. Continue automatically until the complete product works.
 
-## Completed and deployed
+The user also requested a default model correction. The local Codex
+configuration now uses `model = "gpt-6.1-sol"`. The previous value was
+`gpt-6-sol.1`. The configuration parses successfully. Claude configuration
+remains unchanged.
 
-- Applied `supabase/migrations/20261015191814_user_connections.sql` through the
-  Supabase migration API.
-- Added `swarm_user_connections`, `swarm_user_oauth_states`, and
-  `swarm_user_mcp_keys`.
-- Added account-specific OAuth begin/consume, conditional credential save, and
-  active key-owner lookup functions.
-- Browser database roles cannot read these tables or call their functions.
-- Legacy tables and the deployed gateway remain unchanged. All four legacy
-  service reads still pass.
-- New tables are empty. No credentials or accounts have been imported yet.
+## Repository
 
-## Evidence
+- Worktree: `/Users/darragh/SWARM/.wt-swarm-mcp-poc`.
+- Branch: `feature/swarm-mcp-poc`. Use the latest committed state.
+- The workspace root is a container, not a Git repository.
+- Draft pull request: `https://github.com/dbc00per1812/swarm/pull/4`.
+- This repository is public. Never print or commit private credentials or
+  account identities. Keep Claude configuration unchanged.
+- The complete product contracts remain in `plans/connections-beta.md`.
+- Review results and evidence are in `plans/connections-beta.gateway-review.md`.
 
-- The SQL suite failed before the new storage existed.
-- All 26 checks in `supabase/tests/user_connections.test.sql` pass on actual
-  Supabase Postgres.
-- Each suite run uses a transaction and rolls back its fixtures, extension, and
-  changes.
-- Removing the credential-save ownership condition makes two checks fail.
-- The existing 20 Deno tests, type check, and lint pass.
-- Code and security reviews found no blockers. The database review requested an
-  owner index; that index was added and approved.
-- After migration, all four hosted MCP service read calls pass. Legacy storage
-  still contains four connected providers.
+## Deployed gateway
 
-## Storage contracts for the gateway
+- Production uses `index.ts` and `beta-gateway.ts` under
+  `supabase/functions/mcp/`.
+- The original MCP URL, original agent token, and five tool names remain usable.
+- All four imported personal service reads pass through the new gateway.
+- The preview function was removed after production verification.
+- `gateway.ts` retains the old implementation for its baseline regression tests.
+  The production entry point does not import it or use global provider
+  fallbacks.
+- `provider-oauth.ts` reuses the provider exchange and identity lookup logic.
+- `user-store.ts` applies owner filters, encryption, revision checks, and key
+  lookup.
+- `custom-mcp.ts` uses the official client SDK, bounded streams, pagination, and
+  permission checks before each upstream request.
 
-The complete product and API contracts remain in `connections-beta.md`.
+## Storage
 
-- Every connection has an owner UUID and a stable connection UUID.
-- `account_label` is available for the upstream account identity.
-- `settings` is an object. Store each GitHub connection's repository allowlist
-  there.
-- `tool_catalog` is an array, limited to 100 entries and 256 KiB. Store upstream
-  mappings and schemas there.
-- `enabled_tools` is a text array. New custom connections must start with no
-  enabled tools.
-- Every connection UPDATE increments `revision` automatically and changes
-  `updated_at` through a trigger.
-- `swarm_user_begin_oauth(user_id, connection_id, state_hash, verifier, expires_at)`
-  returns the new revision.
-- `swarm_user_consume_oauth(state_hash, provider)` returns zero or one state
-  row, including its owner and connection ID.
-- `swarm_user_save_credential(user_id, connection_id, revision, ciphertext, account_label, previous_ciphertext)`
-  returns a boolean.
-- `swarm_user_key_owner(token_hash)` returns an owner UUID, or null for an
-  unknown or revoked key.
-- All functions are service-role-only and use invoker security. Validate
-  identity before privileged calls.
-- The storage increment does not implement the atomic legacy-import operation.
-  Add a small migration if the gateway needs that transaction.
-- Bind new AES-GCM ciphertext to both user UUID and connection UUID. Preserve
-  old ciphertext until its import succeeds.
-- Import the existing agent token hash for the verified legacy owner, then
-  remove global credential fallbacks.
+Both migrations are installed and registered in remote migration history:
 
-## Continue with increment 2
+- `20261015191814_user_connections.sql`.
+- `20261015193609_legacy_user_import.sql`.
 
-1. Read the plan and inspect the existing gateway, store, adapters, and tests.
-2. Add boundary tests for two users, two accounts, tool selections, key
-   revocation, and custom MCP calls.
-3. Implement the user store and gateway using the current SDK and provider
-   exchange code.
-4. Preserve the current MCP URL, five built-in tool names, and existing agent
-   token during owner-bound migration.
-5. Use optional `connection_id` for built-in reads; require it when multiple
-   enabled accounts match.
-6. Start custom MCP connections with HTTPS, no authentication or bearer
-   authentication, as the plan specifies.
-7. Verify actual hosted DNS and outbound controls; use approved hosts until
-   unrestricted public destinations are safe.
-8. Run the required code, language, and security reviews. Commit the increment
-   and test the live agent path.
-9. Start a fresh chat for increment 3, with a compact handoff and no full
-   conversation history.
+The gateway imported four legacy connections in one transaction. It bound the
+original token hash to the confirmed owner. Credentials use AES-GCM with the
+user UUID and connection UUID as authenticated data. Legacy ciphertext remains
+intact.
 
-## Access and deployment
+The import marker prevents later cold starts from restoring removed connections
+or revoked keys. The restricted owner lookup uses `SECURITY DEFINER` because the
+service role cannot select `auth.users`. The import function uses invoker
+security. Browser roles cannot read credential tables or execute privileged
+functions.
 
-- The actual repository is the current `feature/swarm-mcp-poc` worktree, inside
-  the workspace container.
-- Existing draft pull request: `https://github.com/dbc00per1812/swarm/pull/4`.
-  Do not merge without the required release review.
-- Private management access is saved in `~/.config/swarm/management.json`. It
-  contains `projectRef` and `accessToken`.
-- Private provider OAuth client pairs are in
-  `~/.config/swarm/provider-credentials.json`.
-- Private agent configuration is in `~/.config/swarm/mcp-connection.json`.
-- These files are outside the public repository. Never print or commit their
-  contents.
-- The project URL follows `https://<projectRef>.supabase.co`; its deployed
-  function is `/functions/v1/mcp`.
-- Use the Supabase Management API with the private management credential. Do not
-  depend on another chat's Node bindings.
-- The local Docker daemon is unavailable, and Supabase CLI and psql are not
-  installed.
-- SQL tests were executed through `/v1/projects/<ref>/database/query` using
-  their rollback transaction.
-- Management responses expose only the last SELECT. The SQL suite raises an
-  exception when any pgTAP result fails.
-- The new migration is registered in remote migration history. The older
-  personal migration predates that history.
-- Do not run `db reset` against the hosted project.
-- No paid service or upgrade is authorized. Signup still needs a production
-  email sender or a free social-login setup.
-- Slack and Linear distribution still need checking for other workspaces. Gmail
-  remains a testing application.
+Production retains four native connections, one agent key, one import marker,
+and no pending user OAuth states. All disposable test users were removed.
 
-## Release completion
+## Website API
 
-Finish the existing Connections page, not an agent dashboard. Prove signup,
-persistent sessions, two accounts, per-connection tool controls, custom MCP
-calls, and saved agent setup. Use actual browser and MCP checks. Report provider
-restrictions accurately rather than claiming unrestricted public access.
+The public `GET /config` route returns `projectUrl`, `anonKey`, `services`, and
+`customApprovedHosts`. Every `/v1/` operation requires a valid confirmed
+Supabase session in `Authorization: Bearer <access_token>`.
+
+Use the C2 routes in the plan. All routes are implemented:
+
+- `GET /v1/connections` returns `{ connections, endpointUrl }`.
+- `POST /v1/connections` creates a native account or custom MCP connection.
+- `PATCH /v1/connections/:id` changes name, GitHub settings, tool selections, or
+  the custom bearer credential.
+- `DELETE /v1/connections/:id` removes the account and its pending
+  authorization.
+- `POST /v1/connections/:id/authorize` returns `{ authorizationUrl }`.
+- `POST /v1/connections/:id/discover` returns `{ tools }`.
+- `POST /v1/access-keys` returns `{ id, token, endpointUrl, configuration }`.
+- `DELETE /v1/access-keys/:id` revokes the key.
+
+Create and key responses use HTTP 201. Delete responses use HTTP 204. Unknown
+and foreign connection IDs return the same HTTP 404. The response exposes safe
+settings and tool schemas, without stored credentials. The generated
+configuration includes the `Bearer` prefix. Show the raw token once.
+
+Native account inputs are `{ kind: "native", provider, name, settings? }`.
+GitHub settings use `{ repositories: ["owner/repo"] }`. Each connection has its
+own allowlist. New native accounts start with their single read tool enabled.
+
+Custom inputs are `{ kind: "mcp", name, endpointUrl, bearerToken? }`. Custom
+connections start with no enabled tools. Discovery also clears selections. A
+bearer replacement clears the catalog and selections. An empty bearer removes
+upstream authentication. Endpoint changes require removal and creation.
+
+Use `connection.tools`, `connection.enabledTools`, and tool `id` values for
+controls. Use optional `connection_id` in built-in reads. Multiple permitted
+accounts require explicit selection. Custom tools have stable names defined by
+C3 in the plan.
+
+The old `/signin`, `/connections`, `/connect/:provider`, and
+`/disconnect/:provider` browser routes are no longer supported. Update
+`web/app.js` immediately. Provider callbacks remain at `/callback/:provider` and
+return to `callback.html`.
+
+## Custom destination restriction
+
+The deployed approved host is `mcp.deepwiki.com`. A hosted DeepWiki discovery
+and `read_wiki_structure` call passed through Swarm. Use `/config` to show
+supported hosts in the form. Reject unapproved hosts with a useful message.
+
+The runtime checks DNS before each request and rejects private IPv4 results. It
+rejects redirects and changes to the endpoint URL. It cannot pin the DNS result
+to the TLS request. Keep the approved host list until that control is available.
+Do not claim support for arbitrary public servers.
+
+## Verification
+
+- `deno task test`: 39 passing tests, including the existing 20 tests.
+- `deno task check`, `deno lint`, and formatting checks pass.
+- Hosted Postgres: 26 storage assertions and 12 import assertions pass.
+- Database tests use rollback transactions. Never reset the hosted database.
+- Ownership and schema-ordering mutations make the relevant tests fail.
+- Code, TypeScript, and security reviews found no remaining blockers.
+- The live gateway passed personal reads, two-user separation, foreign
+  operations, independent account authorization, key revocation, and custom tool
+  controls.
+
+## Private deployment access
+
+All private files are outside the repository, under `~/.config/swarm/`:
+
+- `management.json` has `projectRef` and `accessToken`.
+- `provider-credentials.json` has the four provider OAuth client pairs.
+- `mcp-connection.json` has the current private agent configuration.
+- `increment2-ops.py` supports deployment and safe read checks. Inspect it
+  before use.
+- `increment2-live.py` creates disposable users, runs hosted API/custom checks,
+  and removes the users. It accepts the function slug as its argument.
+
+These operation scripts contain file paths, not embedded credentials. They read
+private access files at runtime. Never print those files or raw API responses
+that contain credentials or identities.
+
+The project URL follows `https://<projectRef>.supabase.co`. The function route
+is `/functions/v1/mcp`. Supabase Management API access works. Local Docker,
+Supabase CLI, and `psql` are unavailable.
+
+The deployment script uploads function files as multipart form data. Metadata
+uses `entrypoint_path: "index.ts"` and `verify_jwt: false`. The gateway performs
+its own MCP key and Supabase session validation. Browser API CORS permits the
+configured website origin. The approved host list is stored in
+`SWARM_CUSTOM_MCP_HOSTS`.
+
+No paid purchase or upgrade is authorized.
+
+## Finish increment 3
+
+1. Read the plan and preserve the existing website style and hosting.
+2. Finish the Connections page with persistent Supabase Auth sessions.
+3. Provide signup, signin, signout, account cards, tool controls, and custom MCP
+   setup.
+4. Provide agent key creation, copy actions, and revocation of the created key.
+5. Establish a working production email sender or tested free social login path.
+6. Check Slack and Linear distribution for other workspaces. Report Gmail's
+   testing restrictions accurately. Preserve all existing personal connections.
+7. Deploy the website and exercise desktop and mobile browser journeys.
+8. Prove persistent sessions, two accounts, tool controls, custom MCP calls, and
+   saved agent setup through actual browser and MCP checks.
+9. Run the required reviews, commit and push the website increment, and report
+   the completed product and any provider restrictions.
+
+Finish the Connections product. Do not expand it into an agent dashboard. Do not
+end with an offer to continue or ask the user to restart the work.
