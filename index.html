@@ -21,6 +21,8 @@
       <p id="notice" role="status" aria-live="polite"
         aria-atomic="true">Loading Swarm…</p>
       <p id="error" role="alert" aria-atomic="true"></p>
+      <section id="invitation-panel" class="service"
+        aria-label="Organization invitation" hidden></section>
       <section id="signin-panel" aria-labelledby="signin-title" hidden>
         <h2 id="signin-title">Get started with Swarm</h2>
         <p>Create an account or sign in with GitHub.</p>
@@ -57,9 +59,22 @@
             <button type="submit">Add MCP server</button>
           </form>
         </section>
+        <section id="teams-panel" aria-labelledby="teams-title" hidden>
+          <div
+            class="section-heading"><h2 id="teams-title">Your organizations</h2><button id="refresh-teams" class="quiet" type="button">Refresh organizations</button></div>
+          <p
+            class="muted">Share selected tools with members. Your connections stay private by default.</p>
+          <form id="organization-form">
+            <label for="organization-name">Organization name</label><input id="organization-name" required maxlength="100" autocomplete="off">
+            <button type="submit">Create organization</button>
+          </form>
+          <div id="organizations" class="actions"></div>
+          <section id="team-detail" tabindex="-1"
+            aria-label="Organization details"></section>
+        </section>
         <section class="agent-panel" aria-labelledby="agent-title">
           <h2 id="agent-title">Connect an agent</h2>
-          <p>All agents with your key can use your enabled connections and tools.</p>
+          <p>All agents with your key can use your enabled tools and tools shared with your organizations.</p>
           <label for="endpoint">Swarm MCP address</label><input id="endpoint" readonly>
           <div class="actions"><button id="copy-endpoint" class="quiet" type="button">Copy MCP address</button><button id="create-key" type="button">Create agent key</button></div>
           <div id="new-key" hidden>
