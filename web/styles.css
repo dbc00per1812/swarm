@@ -321,3 +321,26 @@ footer {
     width: 100%;
   }
 }
+
+#team-detail:focus-visible {
+  outline: 3px solid #9acbff;
+  outline-offset: 4px;
+}
+#team-detail li {
+  overflow-wrap: anywhere;
+}
+#invitation-result > input {
+  width: 100%;
+}
+.share-tools {
+  margin-top: 18px;
+}
+
+#organizations button {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+#team-detail h3 {
+  overflow-wrap: anywhere;
+}
