@@ -2,9 +2,20 @@
 
 ## Current increment
 
-Increments 1 and 2 are complete, deployed, and verified. Increment 3 must finish
-the Connections website and release setup. The user requested a fresh chat after
-each increment. Continue automatically until the complete product works.
+Increments 1 and 2 are complete, deployed, and verified. Increment 3 implements
+and deploys the Connections website. Code, JavaScript, and security reviews
+pass. Six page tests and all 39 gateway tests pass. Desktop and mobile browser
+checks pass against production. See `connections-beta.web-review.md` for the
+evidence.
+
+One release check remains: complete GitHub social sign-in after the owner
+approves read-only email access. The browser confirmation policy requires that
+approval. The request was presented in this chat. Do not accept it without the
+owner's reply. No production email sender is configured. Email signup is
+unavailable in the page.
+
+The user requested a fresh chat after each increment. Continue automatically
+until the complete product works. Do not ask the user to restart the task.
 
 The user also requested a default model correction. The local Codex
 configuration now uses `model = "gpt-6.1-sol"`. The previous value was
@@ -153,21 +164,30 @@ configured website origin. The approved host list is stored in
 
 No paid purchase or upgrade is authorized.
 
-## Finish increment 3
+## Increment 3 state
 
-1. Read the plan and preserve the existing website style and hosting.
-2. Finish the Connections page with persistent Supabase Auth sessions.
-3. Provide signup, signin, signout, account cards, tool controls, and custom MCP
-   setup.
-4. Provide agent key creation, copy actions, and revocation of the created key.
-5. Establish a working production email sender or tested free social login path.
-6. Check Slack and Linear distribution for other workspaces. Report Gmail's
-   testing restrictions accurately. Preserve all existing personal connections.
-7. Deploy the website and exercise desktop and mobile browser journeys.
-8. Prove persistent sessions, two accounts, tool controls, custom MCP calls, and
-   saved agent setup through actual browser and MCP checks.
-9. Run the required reviews, commit and push the website increment, and report
-   the completed product and any provider restrictions.
+- GitHub Pages serves the new website from `gh-pages` deployment commit
+  `3b601426cb73d91abd399c5971f1fd0534c848b3`.
+- Build with `npm ci` and `npm test`. Publish the six files listed in
+  `docs/mcp-poc.md`, including `web/dist/app.js`.
+- Supabase GitHub Auth is enabled with the existing private client pair. The
+  GitHub app retains its service callback and adds `/auth/v1/callback`.
+- Slack public distribution and Linear public availability are enabled. Actual
+  installation in another workspace remains untested.
+- Gmail remains a testing application. The page states its restrictions.
+- Two disposable users exercised session persistence, account separation, two
+  authorized GitHub cards, custom discovery, tool controls, copied
+  configuration, custom execution, and key revocation. Their records and private
+  files were removed.
+- Production again contains four personal connections, one active key, and no
+  pending provider authorization states. All four original service reads pass.
+- Desktop and mobile screenshots remain outside this public repository.
 
-Finish the Connections product. Do not expand it into an agent dashboard. Do not
-end with an offer to continue or ask the user to restart the work.
+After the owner approves the email permission, start a fresh GitHub sign-in from
+the website. Earlier authorization state can expire or lose its PKCE verifier
+during the disposable-user tests. Finish consent, verify reload and sign-out,
+and update the verification report. Do not purchase a sender or upgrade a
+service.
+
+Keep the pull request as a draft until the required release review. Do not merge
+without that review. Keep Claude configuration and the Muse connector unchanged.

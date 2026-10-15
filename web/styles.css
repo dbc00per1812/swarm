@@ -88,17 +88,102 @@ label {
   gap: 12px;
 }
 input,
+textarea,
 button {
   font: inherit;
   border-radius: 7px;
   padding: 12px 16px;
 }
-input {
+input,
+textarea {
   background: #101316;
   border: 1px solid #7b858c;
   color: inherit;
   min-width: 0;
   flex: 1;
+}
+form > input,
+form > textarea,
+.agent-panel > input,
+#new-key > input {
+  width: 100%;
+}
+form > button {
+  margin-top: 16px;
+}
+textarea {
+  resize: vertical;
+}
+details {
+  margin-top: 20px;
+}
+summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 10px 0;
+}
+summary:focus-visible,
+textarea:focus-visible,
+article:focus-visible {
+  outline: 3px solid #9acbff;
+  outline-offset: 4px;
+}
+.skip-link {
+  position: absolute;
+  top: -80px;
+  padding: 14px;
+  color: #101316;
+  background: var(--accent);
+}
+.skip-link:focus {
+  top: 0;
+}
+.actions,
+.key-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+  align-items: center;
+}
+.key-row {
+  justify-content: space-between;
+}
+.tool {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+.tool input {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  accent-color: var(--accent);
+}
+.tool label {
+  display: inline;
+  margin-left: 8px;
+  overflow-wrap: anywhere;
+}
+.service h4 {
+  margin: 0;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.service {
+  min-width: 0;
+}
+.service p {
+  overflow-wrap: anywhere;
+}
+.section-heading {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.services:empty {
+  margin-top: 0;
+}
+a {
+  color: var(--accent);
 }
 button {
   background: var(--accent);

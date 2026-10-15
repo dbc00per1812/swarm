@@ -64,9 +64,9 @@ Production retains four imported native connections and the existing agent key.
 
 ## Remaining release work
 
-Increment 3 must update the website to use the versioned API and persistent
-Supabase Auth sessions. The old browser routes are no longer supported. Provider
-distribution and public signup still require release checks.
+Increment 3 updates the website to use the versioned API and persistent Supabase
+Auth sessions. See `connections-beta.web-review.md` for the browser evidence,
+provider distribution settings, and remaining social-login approval check.
 
 Custom destinations currently require an approved host. The deployed list
 contains `mcp.deepwiki.com`. The runtime checks DNS before each request, but
