@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createTeams } from "./teams.js";
 import { endpoint } from "./config.js";
 
 const byId = (id) => document.getElementById(id);
@@ -20,6 +21,16 @@ let generation = 0;
 let refreshSequence = 0;
 let authSequence = 0;
 let keys = [];
+const teams = createTeams({
+  api,
+  node,
+  button,
+  field,
+  submit,
+  message,
+  getUserId: () => userId,
+  copy,
+});
 
 function message(text = "", error = false) {
   byId("error").textContent = error ? text : "";
@@ -70,6 +81,7 @@ function field(form, label, id, value = "", type = "text") {
 function clearPrivateView() {
   generation++;
   userId = null;
+  teams.clear();
   newKey = null;
   keys = [];
   if (popup && !popup.closed) popup.close();
@@ -220,6 +232,7 @@ async function refresh(focusId) {
     group.append(grid);
     byId("services").append(group);
   }
+  await teams.refresh(result.connections);
   if (focusId) document.getElementById(`account-${focusId}`)?.focus();
 }
 function accountCard(connection) {
@@ -479,8 +492,9 @@ async function showSession(session) {
   byId("signin-panel").hidden = true;
   byId("connections-panel").hidden = false;
   renderKeys();
+  const revision = generation;
   await refresh();
-  message("Connections loaded.");
+  if (revision === generation) message("Connections loaded.");
 }
 async function start() {
   const response = await fetch(endpoint + "/config", {
@@ -517,6 +531,7 @@ async function start() {
     "click",
     (event) =>
       busy(event.currentTarget, async () => {
+        teams.prepareSignIn();
         const { error } = await auth.auth.signInWithOAuth({
           provider: "github",
           options: { redirectTo: new URL("./", location.href).href },

@@ -69,6 +69,9 @@ async function page(saved, intercept = () => undefined) {
           status: 204,
         });
       }
+      if (path === "/v1/organizations") {
+        return Response.json({ organizations: [] });
+      }
       if (path === "/v1/connections") {
         return Response.json({ connections, endpointUrl: endpoint });
       }
