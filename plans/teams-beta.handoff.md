@@ -174,16 +174,70 @@ tables are absent after rollback. Shared MCP execution remains unavailable.
 Pull request 4 remains a draft. Named approval and the open private credential
 incident remain separate release limits.
 
+## Increment 2 result
+
+Increment 2 is complete. Implementation commit:
+`0f74e30`. See `plans/teams-beta.increment2.md` for execution controls,
+transaction behavior, review results, and verification limits.
+
+Each personal agent key now resolves owned connections and explicitly shared
+tools. The server-only function is `swarm_team_connections(uuid,uuid)`.
+It checks current recipient membership, owner membership, grants, enabled tools,
+and catalog IDs. Native and custom upstream requests read current permissions
+again after asynchronous preparation. Failed reads deny access. Ambiguous native
+matches require a connection ID. Shared IDs do not permit credential management.
+
+Migration `20261015230000_shared_tool_access.sql` follows the increment 1
+migration. Manual credential saves, reconnect, and catalog replacement withdraw
+grants within their transactions. Routine refresh preserves grants. Withdrawal
+records identifier-only audit events. Writers retain the organization, connection,
+and grant lock order. Display names do not determine account identity.
+
+All 67 gateway tests and 13 page tests pass. Hosted rollback checks pass 24 new
+shared access assertions and the existing 91 assertions. The total is 115.
+Type checks, lint, formatting, builds, and whitespace checks pass. Independent
+source, TypeScript, security, and database reviews found no remaining material
+issue. Five mutations fail their behavioral checks: four gateway mutations and
+one database withdrawal mutation. Restored gateway checks pass.
+
+Hosted database tests use rollback transactions. They do not exercise concurrent
+database sessions. Source reviews checked lock order. Actual two-user website
+and MCP verification remains increment 3 work.
+
+No team migration, gateway, or website deployment occurred. Production still
+has four personal connections, one active key, no pending authorizations, and no
+team tables. Install both team migrations before deploying the changed gateway,
+when release authorization exists. Pull requests 4 and 5 remain drafts. Named
+review and release approval remain required. The credential incident remains
+open because rotation is unverified. The existing Muse connection is unchanged.
+
 ## Next action
 
-Start increment 2 in a new chat in the saved THESWARM project.
-Project ID: `e0463b41-a2f0-42ee-bbe2-2dcbeed54e25`. Use this same
-worktree and `feature/swarm-teams`. Read this handoff first. Implement the shared
-MCP access requirements above. Keep personal connection routes restricted to
-the owner. Reuse the safe organization detail projection for shared metadata.
+Start increment 3 in a new chat in the saved THESWARM project.
+Project ID: `e0463b41-a2f0-42ee-bbe2-2dcbeed54e25`. Use local
+execution and omit model overrides. Use this worktree on `feature/swarm-teams`.
+Read this handoff first, then the increment 1 and increment 2 evidence files.
 
-The current API stores grants but does not use them during MCP execution.
-Credential and catalog grant withdrawal remains increment 2 work. Keep the
-organization lock and connection lock order consistent during conflicting writes.
-After increment 2, commit and push its changes, update this handoff, and create
-the requested increment 3 chat automatically. Do not require a manual restart.
+Add website organization, member, invitation, and selected sharing controls.
+Use invitation fragments. Capture them before existing fragment cleanup.
+Preserve pending invitations across sign-in, then require explicit acceptance.
+Use current design conventions and accessible controls. Keep credentials private.
+
+Complete actual two-user website and MCP verification where authorized.
+Preserve the named release gate. No team deployment or publication is authorized.
+Do all available implementation and verification work. State any remaining hosted
+verification limit honestly. Do not invent approval or report deployment.
+Use disposable fixtures and rollback transactions. Never reset the database.
+
+Private read-only database checks are available in
+`~/.config/swarm/teams-db-check.py`. Inspect this helper before use.
+It reads Management API access from the existing private file. It prints only
+assertion counts or safe production counts. Its modes are `suite` and `state`.
+Its optional mutation argument disables manual withdrawal inside a rollback
+transaction. Raw failures stay in `~/.config/swarm/teams-db-error.json`.
+Do not print that file without removing sensitive values. The older operational
+helpers have deployment modes and raw error output. Do not run those modes.
+
+Commit and push the completed increment. Update draft team pull request 5 and
+this handoff with evidence and remaining release limits. Preserve the separate
+Connections branch and pull request 4. Keep Claude configuration unchanged.
