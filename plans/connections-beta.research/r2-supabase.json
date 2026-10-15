@@ -1,0 +1,120 @@
+{
+  "answer": "### 1. Supabase Auth, Session Handling & User Isolation\n- **Session Validation**: Validate access tokens on the server using `supabase.auth.getClaims()` [1, 2]. It cryptographically validates JWT signatures locally via the WebCrypto API and cached project JWKS endpoints [1, 2]. Never trust `getSession()` inside server environments because it reads unvalidated local storage [2, 3].\n- **User Isolation**: Enable Row Level Security (RLS) on all database tables [4, 5] and revoke automatic default privileges from `anon` and `authenticated` roles (`ALTER DEFAULT PRIVILEGES ...`) [6]. Enforce tenant boundaries in policies using `(select auth.uid()) = user_id` [7, 8]. Wrapping `auth.uid()` in a `SELECT` subquery allows the Postgres optimizer to cache the result per statement via an `initPlan` [8].\n- **Service Role Bypass**: Server-side administrative tasks use the `service_role` key, which carries the `service_role` Postgres role with `bypassrls` privileges [9, 10]. It bypasses RLS automatically when no user access token is attached to the request [10].\n\n### 2. Migration Safeguards\n- Bundle database schema changes and RLS policies in versioned SQL files under `supabase/migrations/` [11].\n- Convert legacy single-owner credentials using a `SECURITY DEFINER` function placed in an unexposed `private` schema with `SET search_path = ''` [12-14].\n- *Missing coverage*: Specific OAuth revision race algorithms or MCP state migration details are not present in Supabase documentation. Handle concurrent token updates using Postgres transactions and PL/pgSQL function locks [15].\n\n### 3. Boundary Tests\n- Write pgTAP test files under `supabase/tests/connections_rls.test.sql` and execute them via `supabase test db` [16, 17].\n- Impersonate tenant roles in SQL using `SET LOCAL ROLE authenticated;` and `SET LOCAL request.jwt.claim.sub = 'user-uuid';` [18, 19].\n- **Tenant Leaks**: Assert that Tenant B querying Tenant A’s connection returns zero rows using `select is_empty($$select * from connections returning *$$)` [18, 19].\n- **Denied Operations**: Assert that cross-tenant updates/deletes touch zero rows with `is_empty()`, then verify Tenant A’s row remains intact [18-20]. Assert missing privileges or `WITH CHECK` violations throw SQLSTATE `42501` using `throws_ok()` [19, 20].\n\n### 4. Logic to Reuse vs. Rebuild\n- **Reuse**:\n  1. Supabase Auth for JWT issuance, token verification (`getClaims`), and WebCrypto JWKS validation [1, 21].\n  2. Postgres RLS and `auth.uid()` for tenant filtering [7, 22].\n  3. Supabase Edge Gateway for automatic JWT routing and auth header validation [23].\n  4. Postgres Vault or `pgsodium` extension for database credentials encryption [24, 25].\n- **Do Not Rebuild**: Custom JWT parsers, manual session cookie stores, or custom database authorization frameworks [1, 26].\n\n### 5. Table Architecture: Single Table vs. Separate Tables\n**One `connections` table is sufficient.** Standardizing native OAuth and custom MCP credentials into a single table with a `type` discriminator column and `credentials jsonb` payload works cleanly. RLS uniformly enforces `user_id = (select auth.uid())` across all connection types [7, 8], avoiding duplicate policy logic across multiple tables [27].\n\n---\n*Missing Coverage Notice*: MCP protocol specifications, MCP token hashing algorithms, and Deno MCP gateway proxy implementation details are not covered in the provided Supabase documentation.",
+  "references": [
+    {
+      "citation_number": 1,
+      "source_id": "50fbcc33-7b8a-4ac4-92d6-37a325c7502a",
+      "cited_text": "Use the browser client in code that runs on the browser, and the server client in code that runs on"
+    },
+    {
+      "citation_number": 2,
+      "source_id": "50fbcc33-7b8a-4ac4-92d6-37a325c7502a"
+    },
+    {
+      "citation_number": 3,
+      "source_id": "50fbcc33-7b8a-4ac4-92d6-37a325c7502a"
+    },
+    {
+      "citation_number": 4,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b",
+      "cited_text": "A table in an exposed schema without RLS is readable and writable by any role with a grant on it."
+    },
+    {
+      "citation_number": 5,
+      "source_id": "6398687d-231a-4747-9425-a53a0705780c",
+      "cited_text": "Enable RLS on every table and view exposed through the Data API. You can then write policies that grant users"
+    },
+    {
+      "citation_number": 6,
+      "source_id": "6398687d-231a-4747-9425-a53a0705780c"
+    },
+    {
+      "citation_number": 7,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 8,
+      "source_id": "34697f48-7489-4c22-ba5e-ecf6a60ec1e6",
+      "cited_text": "Call functions with select # You can use select statement to improve policies that use functions. For example, instead of"
+    },
+    {
+      "citation_number": 9,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 10,
+      "source_id": "34697f48-7489-4c22-ba5e-ecf6a60ec1e6"
+    },
+    {
+      "citation_number": 11,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 12,
+      "source_id": "b5dcd6cc-ac51-44fa-94be-b2f78f2a5051",
+      "cited_text": "Security definer vs invoker # Postgres allows you to specify whether you want the function to be executed as the"
+    },
+    {
+      "citation_number": 13,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 14,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 15,
+      "source_id": "b5dcd6cc-ac51-44fa-94be-b2f78f2a5051"
+    },
+    {
+      "citation_number": 16,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 17,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 18,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 19,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 20,
+      "source_id": "34697f48-7489-4c22-ba5e-ecf6a60ec1e6"
+    },
+    {
+      "citation_number": 21,
+      "source_id": "50fbcc33-7b8a-4ac4-92d6-37a325c7502a"
+    },
+    {
+      "citation_number": 22,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 23,
+      "source_id": "25d55c88-773b-4d11-8f48-4cf0006efbe7",
+      "cited_text": "How it works # Request enters an edge gateway (relay) — the gateway routes traffic, handles auth headers/JWT validation, and"
+    },
+    {
+      "citation_number": 24,
+      "source_id": "b5dcd6cc-ac51-44fa-94be-b2f78f2a5051"
+    },
+    {
+      "citation_number": 25,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 26,
+      "source_id": "8465da42-183e-4942-b63c-f883cc17968b"
+    },
+    {
+      "citation_number": 27,
+      "source_id": "34697f48-7489-4c22-ba5e-ecf6a60ec1e6"
+    }
+  ],
+  "note": "Retrieved guidance, not verified repository facts. Exact contracts are design decisions in the plan."
+}
