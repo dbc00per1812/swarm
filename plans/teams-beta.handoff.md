@@ -151,38 +151,39 @@ No Docker, Supabase CLI, or `psql` is available. The Management API works.
 
 Increment 1 is complete. See `plans/teams-beta.increment1.md` for the management
 API contract, permission controls, review results, and verification limits.
-Implementation commit: `d0916dc02b8d75835735454cf470f95b16740de5`.
-Draft team pull request: `https://github.com/dbc00per1812/swarm/pull/5`.
-Its base is `feature/swarm-mcp-poc`; its head is `feature/swarm-teams`.
-Keep this pull request as a draft during the remaining increments.
+Implementation commit: `d0916dc02b8d75835735454cf470f95b16740de5`. Draft team
+pull request: `https://github.com/dbc00per1812/swarm/pull/5`. Its base is
+`feature/swarm-mcp-poc`; its head is `feature/swarm-teams`. Keep this pull
+request as a draft during the remaining increments.
 
 The additive migration is `20261015220000_lightweight_teams.sql`. The team API
 uses `teams.ts` through `beta-gateway.ts`. The server-only database function is
 `swarm_team_manage(uuid,text,uuid,jsonb)`. It enforces organization membership,
-owner controls, invitation acceptance, and selected-tool sharing in transactions.
+owner controls, invitation acceptance, and selected-tool sharing in
+transactions.
 
-All 49 gateway tests and 13 page tests pass. Hosted rollback checks pass 41 team,
-26 storage, 12 import, and 12 OAuth assertions. Type checks, lint, formatting,
-builds, and whitespace checks pass. Independent source, TypeScript, security,
-and database reviews found no remaining material issue. The audit-permission
-finding was fixed and has a failing mutation check.
+All 49 gateway tests and 13 page tests pass. Hosted rollback checks pass 41
+team, 26 storage, 12 import, and 12 OAuth assertions. Type checks, lint,
+formatting, builds, and whitespace checks pass. Independent source, TypeScript,
+security, and database reviews found no remaining material issue. The
+audit-permission finding was fixed and has a failing mutation check.
 
 No team migration, gateway, or website deployment occurred. Production remains
 on the reviewed Connections release. A read-only count check confirms four
 personal connections, one active key, and no pending authorizations. The team
-tables are absent after rollback. Shared MCP execution remains unavailable.
-Pull request 4 remains a draft. Named approval and the open private credential
+tables are absent after rollback. Shared MCP execution remains unavailable. Pull
+request 4 remains a draft. Named approval and the open private credential
 incident remain separate release limits.
 
 ## Increment 2 result
 
-Increment 2 is complete. Implementation commit:
-`0f74e30`. See `plans/teams-beta.increment2.md` for execution controls,
-transaction behavior, review results, and verification limits.
+Increment 2 is complete. Implementation commit: `0f74e30`. See
+`plans/teams-beta.increment2.md` for execution controls, transaction behavior,
+review results, and verification limits.
 
 Each personal agent key now resolves owned connections and explicitly shared
-tools. The server-only function is `swarm_team_connections(uuid,uuid)`.
-It checks current recipient membership, owner membership, grants, enabled tools,
+tools. The server-only function is `swarm_team_connections(uuid,uuid)`. It
+checks current recipient membership, owner membership, grants, enabled tools,
 and catalog IDs. Native and custom upstream requests read current permissions
 again after asynchronous preparation. Failed reads deny access. Ambiguous native
 matches require a connection ID. Shared IDs do not permit credential management.
@@ -190,12 +191,13 @@ matches require a connection ID. Shared IDs do not permit credential management.
 Migration `20261015230000_shared_tool_access.sql` follows the increment 1
 migration. Manual credential saves, reconnect, and catalog replacement withdraw
 grants within their transactions. Routine refresh preserves grants. Withdrawal
-records identifier-only audit events. Writers retain the organization, connection,
-and grant lock order. Display names do not determine account identity.
+records identifier-only audit events. Writers retain the organization,
+connection, and grant lock order. Display names do not determine account
+identity.
 
 All 67 gateway tests and 13 page tests pass. Hosted rollback checks pass 24 new
-shared access assertions and the existing 91 assertions. The total is 115.
-Type checks, lint, formatting, builds, and whitespace checks pass. Independent
+shared access assertions and the existing 91 assertions. The total is 115. Type
+checks, lint, formatting, builds, and whitespace checks pass. Independent
 source, TypeScript, security, and database reviews found no remaining material
 issue. Five mutations fail their behavioral checks: four gateway mutations and
 one database withdrawal mutation. Restored gateway checks pass.
@@ -204,40 +206,61 @@ Hosted database tests use rollback transactions. They do not exercise concurrent
 database sessions. Source reviews checked lock order. Actual two-user website
 and MCP verification remains increment 3 work.
 
-No team migration, gateway, or website deployment occurred. Production still
-has four personal connections, one active key, no pending authorizations, and no
+No team migration, gateway, or website deployment occurred. Production still has
+four personal connections, one active key, no pending authorizations, and no
 team tables. Install both team migrations before deploying the changed gateway,
 when release authorization exists. Pull requests 4 and 5 remain drafts. Named
 review and release approval remain required. The credential incident remains
 open because rotation is unverified. The existing Muse connection is unchanged.
 
-## Next action
+## Increment 3 result
 
-Start increment 3 in a new chat in the saved THESWARM project.
-Project ID: `e0463b41-a2f0-42ee-bbe2-2dcbeed54e25`. Use local
-execution and omit model overrides. Use this worktree on `feature/swarm-teams`.
-Read this handoff first, then the increment 1 and increment 2 evidence files.
+Increment 3 implementation and authorized verification are complete.
+Implementation commit: `64bbf88f2c58469760342969f4b22486b9192d0e`. See
+`plans/teams-beta.increment3.md` for behavior, checks, and remaining limits.
 
-Add website organization, member, invitation, and selected sharing controls.
-Use invitation fragments. Capture them before existing fragment cleanup.
-Preserve pending invitations across sign-in, then require explicit acceptance.
-Use current design conventions and accessible controls. Keep credentials private.
+The website now has organization, member, invitation, and selected sharing
+controls. Invitations use fragments and explicit acceptance. Session storage
+preserves pending invitations before sign-in. Same-tab links also work.
+Recipients see safe shared tool metadata. Existing server routes enforce
+permissions. No database or gateway source changed in this increment.
 
-Complete actual two-user website and MCP verification where authorized.
-Preserve the named release gate. No team deployment or publication is authorized.
-Do all available implementation and verification work. State any remaining hosted
-verification limit honestly. Do not invent approval or report deployment.
-Use disposable fixtures and rollback transactions. Never reset the database.
+All 32 page tests and 67 gateway tests pass. All 115 hosted database assertions
+pass in rollback transactions. Type checks, lint, formatting, builds, dependency
+audit, and whitespace checks pass. Three new behavioral mutations fail as
+required. Independent source, JavaScript, accessibility, and security reviews
+found no remaining material issue after corrections.
 
-Private read-only database checks are available in
-`~/.config/swarm/teams-db-check.py`. Inspect this helper before use.
-It reads Management API access from the existing private file. It prints only
-assertion counts or safe production counts. Its modes are `suite` and `state`.
-Its optional mutation argument disables manual withdrawal inside a rollback
-transaction. Raw failures stay in `~/.config/swarm/teams-db-error.json`.
-Do not print that file without removing sensitive values. The older operational
-helpers have deployment modes and raw error output. Do not run those modes.
+Chromium exercised two isolated accounts through the website with synthetic API
+responses. Desktop and mobile layouts pass at 1280, 390, and 320 pixels. Axe
+reports zero WCAG A/AA violations in the two tested states. These checks do not
+establish complete accessibility compliance. Screen reader testing remains
+unperformed.
 
-Commit and push the completed increment. Update draft team pull request 5 and
-this handoff with evidence and remaining release limits. Preserve the separate
-Connections branch and pull request 4. Keep Claude configuration unchanged.
+The original agent setup and all four original service reads pass. A final
+read-only check confirms four personal connections, one active key, no pending
+authorizations, and no team tables. Temporary browser fixtures and private
+verification files were removed. No persistent test accounts or team records
+were created. The existing Muse connection and Claude configuration remain
+unchanged.
+
+## Remaining release gate
+
+All three accepted increments are implemented. No further implementation
+increment or new chat is required. Keep pull requests 4 and 5 as drafts. Named
+review and release authorization remain required before merge, migration
+installation, deployment, or publication. Do not infer another person's
+approval.
+
+No team migration, gateway, or website deployment occurred. Production remains
+on the reviewed Connections release. Actual hosted two-user website and shared
+MCP verification remains unavailable without persistent team migrations and a
+changed gateway. The local browser checks use synthetic API responses. Gateway
+tests use the actual handler with synthetic remote boundaries. Database tests
+use rollback transactions, without simultaneous sessions.
+
+When release authorization exists, install both team migrations in order before
+deploying the changed gateway. Complete actual hosted two-user flows, remove
+disposable fixtures, and repeat the original service baseline. Do not reset the
+database. The credential-output incident remains open because rotation is
+unverified.
