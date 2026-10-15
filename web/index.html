@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <title>Swarm — Your connections</title>
+    <link rel="stylesheet" href="styles.css">
+    <script type="module" src="app.js"></script>
+  </head>
+  <body>
+    <header><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> SWARM</a><span class="tag">PERSONAL PREVIEW</span></header>
+    <main>
+      <p class="eyebrow">ONE CONNECTION FOR YOUR AGENTS</p>
+      <h1>Your tools.<br>Your connections.</h1>
+      <p
+        class="intro">Connect your accounts once. Your authorized agents can then use them through Swarm.</p>
+      <section id="signin-panel" aria-labelledby="signin-title">
+        <h2 id="signin-title">Sign in to your Swarm</h2>
+        <form
+          id="signin-form"><label for="email">Email address</label><div class="form-row"><input id="email" name="email" type="email" autocomplete="email" required aria-describedby="signin-help"><button type="submit">Send sign-in link</button></div><p id="signin-help" class="muted">Use the email account that owns this Swarm. We will send you a sign-in link.</p></form>
+      </section>
+      <section id="connections-panel" hidden
+        aria-labelledby="connections-title">
+        <div
+          class="section-heading"><h2 id="connections-title">Connected services</h2><button id="signout" class="quiet" type="button">Sign out</button></div>
+        <div id="services" class="services"></div>
+        <section class="agent-panel"
+          aria-labelledby="agent-title"><h2 id="agent-title">Connect your agent</h2><p>Use this MCP address with your private Swarm access credential.</p><code id="endpoint"></code><button id="copy-endpoint" class="quiet" type="button">Copy MCP address</button><p class="muted">This preview provides read access. Each service controls which account data you can authorize.</p></section>
+      </section>
+      <p id="notice" role="status" aria-live="polite"></p>
+      <p id="error" role="alert"></p>
+    </main>
+    <footer>Your service credentials stay on the Swarm server. Agents receive tool results.</footer>
+  </body>
+</html>

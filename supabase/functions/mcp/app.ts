@@ -18,7 +18,7 @@ export interface AppConfig extends ServiceConfig {
 
 type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
-async function limitedBody(
+export async function limitedBody(
   body: ReadableStream<Uint8Array> | null,
   maximum: number,
 ) {
@@ -51,6 +51,15 @@ async function limitedBody(
 
 function toolResult(value: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(value) }] };
+}
+
+export function validBearer(request: Request, token?: string) {
+  if (!token || token.length < 32) return false;
+  const expected = new TextEncoder().encode(`Bearer ${token}`);
+  const actual = new TextEncoder().encode(
+    request.headers.get("Authorization") ?? "",
+  );
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
 export function createApp(config: AppConfig, fetcher: Fetcher = fetch) {
@@ -164,13 +173,9 @@ export function createApp(config: AppConfig, fetcher: Fetcher = fetch) {
     if (!config.accessToken || config.accessToken.length < 32) {
       return reply("Server authentication is not configured.", 503);
     }
-    const expected = new TextEncoder().encode(`Bearer ${config.accessToken}`);
-    const actual = new TextEncoder().encode(
-      request.headers.get("Authorization") ?? "",
-    );
-    if (
-      actual.length !== expected.length || !timingSafeEqual(actual, expected)
-    ) return reply("Authentication required.", 401);
+    if (!validBearer(request, config.accessToken)) {
+      return reply("Authentication required.", 401);
+    }
     if (request.headers.has("Origin")) {
       return reply("Browser origins are not allowed.", 403);
     }
