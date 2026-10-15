@@ -12,9 +12,10 @@ This proof of concept supports one owner. It uses the Supabase Free plan.
 - Return service errors without credentials or response bodies.
 
 The endpoint uses the official MCP TypeScript SDK on Supabase Edge Functions.
-The function checks its own bearer credential, so gateway JWT verification is
-disabled. This personal credential is not the Supabase service key or account
-access token.
+Production imports include explicit package versions because the deployment
+bundle has no import map. The function checks its own bearer credential, so
+gateway JWT verification is disabled. This personal credential is not the
+Supabase service key or account access token.
 
 ## Local checks
 

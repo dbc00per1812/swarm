@@ -52,13 +52,13 @@ Deno.test("an MCP client can discover tools and read allowed GitHub pull request
       githubToken: "test-provider-credential",
       githubRepositories: ["demo/project"],
     },
-    async () =>
-      Response.json([{
+    () =>
+      Promise.resolve(Response.json([{
         number: 12,
         title: "Fix issue",
         html_url: "https://github.com/demo/project/pull/12",
         state: "open",
-      }]),
+      }])),
   );
   const client = new Client({ name: "swarm-test", version: "1.0.0" });
   const transport = new StreamableHTTPClientTransport(
@@ -102,7 +102,7 @@ Deno.test("provider failures produce an error without exposing credentials or re
     accessToken,
     githubToken: "test-provider-credential",
     githubRepositories: ["demo/project"],
-  }, async () => new Response("provider-secret", { status: 401 }));
+  }, () => Promise.resolve(new Response("provider-secret", { status: 401 })));
   const response = await app(
     request({
       jsonrpc: "2.0",
