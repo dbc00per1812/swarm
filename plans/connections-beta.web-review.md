@@ -17,9 +17,10 @@ It preserves the existing website style, GitHub Pages hosting, and MCP endpoint.
   messages.
 
 Email signup remains unavailable because no production sender is configured.
-GitHub is the free social-login path. Its final live approval check remains
-pending owner approval for read-only email access. Configuration alone does not
-prove a completed social-login journey.
+GitHub is the tested free social-login path. The owner approved read-only email
+access. Production social sign-in, session reload, sign-out, and repeat sign-in
+all pass. Reload restored the four existing personal connection cards. All four
+original service reads pass after the social-login check.
 
 ## Independent reviews
 
@@ -68,6 +69,10 @@ passed these checks:
 - Key revocation through the page rejects the next MCP request with HTTP 401.
 - A 390-by-844 viewport shows a single card column without horizontal overflow.
   Tool changes work at that width. Raw keys do not return after reload.
+
+The final social-login check used the existing owner's GitHub account after
+explicit approval. Supabase associated that identity with the existing Swarm
+account. The check did not create another human provider account.
 
 The two GitHub cards used the same authorized provider identity. Distinct
 provider results remain covered by the gateway fixtures. No second human account

@@ -2,20 +2,17 @@
 
 ## Current increment
 
-Increments 1 and 2 are complete, deployed, and verified. Increment 3 implements
-and deploys the Connections website. Code, JavaScript, and security reviews
-pass. Six page tests and all 39 gateway tests pass. Desktop and mobile browser
-checks pass against production. See `connections-beta.web-review.md` for the
-evidence.
+All three increments are complete, deployed, and verified. Code, JavaScript, and
+security reviews pass. Six page tests and all 39 gateway tests pass. Desktop and
+mobile browser checks pass against production. See
+`connections-beta.web-review.md` for the evidence.
 
-One release check remains: complete GitHub social sign-in after the owner
-approves read-only email access. The browser confirmation policy requires that
-approval. The request was presented in this chat. Do not accept it without the
-owner's reply. No production email sender is configured. Email signup is
-unavailable in the page.
+The owner approved GitHub read-only email access. Production social sign-in,
+session reload, sign-out, and repeat sign-in pass. Reload restored all four
+original connection cards. The original agent still reads all four services.
 
-The user requested a fresh chat after each increment. Continue automatically
-until the complete product works. Do not ask the user to restart the task.
+GitHub provides the tested free social-login path. No production email sender is
+configured. Email signup remains unavailable in the page.
 
 The user also requested a default model correction. The local Codex
 configuration now uses `model = "gpt-6.1-sol"`. The previous value was
@@ -183,11 +180,9 @@ No paid purchase or upgrade is authorized.
   pending provider authorization states. All four original service reads pass.
 - Desktop and mobile screenshots remain outside this public repository.
 
-After the owner approves the email permission, start a fresh GitHub sign-in from
-the website. Earlier authorization state can expire or lose its PKCE verifier
-during the disposable-user tests. Finish consent, verify reload and sign-out,
-and update the verification report. Do not purchase a sender or upgrade a
-service.
+No implementation steps remain for the agreed beta scope. The final social
+sign-in check used the existing owner's account. It did not require another
+human provider account, a paid sender, or a service upgrade.
 
 Keep the pull request as a draft until the required release review. Do not merge
 without that review. Keep Claude configuration and the Muse connector unchanged.

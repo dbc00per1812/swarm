@@ -66,7 +66,7 @@ Production retains four imported native connections and the existing agent key.
 
 Increment 3 updates the website to use the versioned API and persistent Supabase
 Auth sessions. See `connections-beta.web-review.md` for the browser evidence,
-provider distribution settings, and remaining social-login approval check.
+provider distribution settings, and completed social-login check.
 
 Custom destinations currently require an approved host. The deployed list
 contains `mcp.deepwiki.com`. The runtime checks DNS before each request, but
