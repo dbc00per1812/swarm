@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+    <title>Swarm — Your connections</title>
+    <link rel="stylesheet" href="styles.css">
+    <script defer src="dist/app.js"></script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <header><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> SWARM</a><span class="tag">CONNECTIONS BETA</span></header>
+    <main id="main">
+      <p class="eyebrow">ONE CONNECTION FOR YOUR AGENTS</p>
+      <h1>Your tools.<br>Your connections.</h1>
+      <p
+        class="intro">Connect your accounts once. Choose the tools your agents can use.</p>
+      <p id="notice" role="status" aria-live="polite"
+        aria-atomic="true">Loading Swarm…</p>
+      <p id="error" role="alert" aria-atomic="true"></p>
+      <section id="signin-panel" aria-labelledby="signin-title" hidden>
+        <h2 id="signin-title">Get started with Swarm</h2>
+        <p>Create an account or sign in with GitHub.</p>
+        <button id="github-signin" type="button">Continue with GitHub</button>
+        <p
+          class="muted">Swarm saves your session in this browser. Sign out on shared devices.</p>
+        <details>
+          <summary>Sign in with an existing email account</summary>
+          <form id="signin-form">
+            <label for="email">Email address</label><input id="email" name="email" type="email" autocomplete="email" required>
+            <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button type="submit">Sign in with email</button>
+          </form>
+          <p
+            class="muted">Use GitHub to create an account. Email signup is unavailable while the production sender is not configured.</p>
+        </details>
+      </section>
+      <section id="connections-panel" hidden
+        aria-labelledby="connections-title">
+        <div
+          class="section-heading"><h2 id="connections-title">Your connections</h2><button id="signout" class="quiet" type="button">Sign out</button></div>
+        <p id="empty" class="muted"
+          hidden>Add an account or a custom MCP server to get started.</p>
+        <div id="services"></div>
+        <section class="service" aria-labelledby="custom-title">
+          <h3 id="custom-title">Add a custom MCP server</h3>
+          <p
+            class="muted">Connect a hosted HTTPS server with optional bearer authentication. Select tools after discovery.</p>
+          <p id="approved-hosts" class="muted"></p>
+          <form id="custom-form">
+            <label for="custom-name">Connection name</label><input id="custom-name" required maxlength="100" autocomplete="off">
+            <label for="custom-url">MCP server URL</label><input id="custom-url" type="url" required placeholder="https://mcp.deepwiki.com/mcp" aria-describedby="approved-hosts">
+            <label for="custom-bearer">Bearer token (optional)</label><input id="custom-bearer" type="password" autocomplete="off" maxlength="8192">
+            <button type="submit">Add MCP server</button>
+          </form>
+        </section>
+        <section class="agent-panel" aria-labelledby="agent-title">
+          <h2 id="agent-title">Connect an agent</h2>
+          <p>All agents with your key can use your enabled connections and tools.</p>
+          <label for="endpoint">Swarm MCP address</label><input id="endpoint" readonly>
+          <div class="actions"><button id="copy-endpoint" class="quiet" type="button">Copy MCP address</button><button id="create-key" type="button">Create agent key</button></div>
+          <div id="new-key" hidden>
+            <p class="muted">Copy this key now. Swarm shows it only until you leave this page. Keep it private.</p>
+            <label for="raw-key">Raw agent token</label><input id="raw-key" type="password" readonly autocomplete="off">
+            <div class="actions"><button id="copy-key" class="quiet" type="button">Copy token</button><button id="copy-config" type="button">Copy configuration</button><button id="download-config" class="quiet" type="button">Save configuration</button></div>
+            <p class="muted">Paste the JSON configuration into an MCP client that supports HTTP and Authorization headers. The configuration includes the Bearer prefix.</p>
+          </div>
+          <div id="keys"></div>
+          <p class="muted">This browser remembers key IDs for revocation. It does not save raw keys. Revoking a key stops its next request.</p>
+        </section>
+      </section>
+      <noscript>Enable JavaScript to use Swarm Connections.</noscript>
+    </main>
+    <footer>Your service credentials stay on the Swarm server. Agents receive tool results.</footer>
+  </body>
+</html>

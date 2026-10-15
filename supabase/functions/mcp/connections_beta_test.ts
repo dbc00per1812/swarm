@@ -1,0 +1,761 @@
+import { assertEquals } from "@std/assert";
+import { createBetaGateway as createGateway } from "./beta-gateway.ts";
+import { UserStore as ConnectionStore } from "./user-store.ts";
+
+Deno.test("a second confirmed user can list their own connections", async () => {
+  const fetcher: typeof fetch = (input) => {
+    const path = new URL(String(input)).pathname;
+    return Promise.resolve(Response.json(
+      path === "/auth/v1/user"
+        ? {
+          id: "22222222-2222-4222-8222-222222222222",
+          email: "second@example.test",
+          email_confirmed_at: new Date().toISOString(),
+        }
+        : [],
+    ));
+  };
+  const config = {
+    projectUrl: "https://project.test",
+    anonKey: "public-test-key",
+    ownerEmail: "first@example.test",
+    uiUrl: "https://swarm.test/",
+    endpointUrl: "https://project.test/functions/v1/mcp",
+    clients: {},
+    customPolicy: { approvedHosts: [] },
+  };
+  const gateway = createGateway(
+    config,
+    new ConnectionStore({
+      projectUrl: config.projectUrl,
+      serviceKey: "service-test-key",
+      encryptionKey: "a".repeat(64),
+    }, fetcher),
+    fetcher,
+  );
+  const response = await gateway(
+    new Request(`${config.endpointUrl}/v1/connections`, {
+      headers: { Authorization: "Bearer second-session" },
+    }),
+  );
+  assertEquals(response.status, 200);
+  assertEquals((await response.json()).connections, []);
+});
+
+import { assert, assertStringIncludes } from "@std/assert";
+import { createApp } from "./app.ts";
+import { digest } from "./connection-store.ts";
+import type { Connection } from "./user-store.ts";
+
+const users = [
+  "11111111-1111-4111-8111-111111111111",
+  "22222222-2222-4222-8222-222222222222",
+];
+function fixture(upstream?: typeof fetch) {
+  const tables: Record<string, Record<string, unknown>[]> = {
+    swarm_user_connections: [],
+    swarm_user_mcp_keys: [],
+    swarm_user_oauth_states: [],
+  };
+  const fetcher: typeof fetch = async (input, init) => {
+    const request = new Request(input, init), url = new URL(request.url);
+    if (url.pathname === "/auth/v1/user") {
+      const token = request.headers.get("Authorization");
+      const index = token === "Bearer session-0"
+        ? 0
+        : token === "Bearer session-1"
+        ? 1
+        : -1;
+      return index < 0 ? Response.json({}, { status: 401 }) : Response.json({
+        id: users[index],
+        email: `user${index}@example.test`,
+        email_confirmed_at: new Date().toISOString(),
+      });
+    }
+    if (!url.pathname.startsWith("/rest/v1/")) {
+      if (upstream) return await upstream(input, init);
+      if (url.hostname === "github.com") {
+        return Response.json({ access_token: "provider-secret", scope: "" });
+      }
+      if (url.pathname === "/user") {
+        return Response.json({ login: "fixture-account" });
+      }
+      if (url.hostname === "api.github.com") {
+        return Response.json([{
+          number: 1,
+          title: request.headers.get("Authorization"),
+          html_url: "https://example.test/pull/1",
+          state: "open",
+        }]);
+      }
+      throw new Error("Unexpected external request.");
+    }
+    const table = url.pathname.split("/").at(-1)!;
+    if (url.pathname.includes("/rpc/")) {
+      const body = await request.json();
+      if (table === "swarm_user_key_owner") {
+        return Response.json(
+          tables.swarm_user_mcp_keys.find((key) =>
+            key.token_hash === body.p_token_hash && !key.revoked_at
+          )?.user_id ?? null,
+        );
+      }
+      const rows = tables.swarm_user_connections;
+      const row = rows.find((row) =>
+        row.user_id === body.p_user_id && row.id === body.p_connection_id
+      );
+      if (table === "swarm_user_save_credential") {
+        if (
+          !row || row.revision !== body.p_revision ||
+          (body.p_previous_ciphertext &&
+            row.ciphertext !== body.p_previous_ciphertext)
+        ) return Response.json(false);
+        Object.assign(row, {
+          ciphertext: body.p_ciphertext,
+          account_label: body.p_account_label,
+          revision: Number(row.revision) + 1,
+        });
+        return Response.json(true);
+      }
+      if (table === "swarm_user_begin_oauth" && row) {
+        row.revision = Number(row.revision) + 1;
+        tables.swarm_user_oauth_states = tables.swarm_user_oauth_states.filter((
+          state,
+        ) => state.connection_id !== row.id);
+        tables.swarm_user_oauth_states.push({
+          state_hash: body.p_state_hash,
+          user_id: body.p_user_id,
+          connection_id: row.id,
+          verifier: body.p_verifier,
+          revision: row.revision,
+          expires_at: body.p_expires_at,
+        });
+        return Response.json(row.revision);
+      }
+      if (table === "swarm_user_complete_oauth") {
+        const state = tables.swarm_user_oauth_states.find((state) =>
+          state.state_hash === body.p_state_hash &&
+          state.user_id === body.p_user_id && state.verifier === body.p_verifier
+        );
+        const connection = state &&
+          rows.find((row) =>
+            row.id === state.connection_id && row.user_id === state.user_id &&
+            row.provider === body.p_provider && row.revision === state.revision
+          );
+        if (
+          !state || !connection ||
+          Date.parse(String(state.expires_at)) <= Date.now()
+        ) return Response.json([]);
+        tables.swarm_user_oauth_states.splice(
+          tables.swarm_user_oauth_states.indexOf(state),
+          1,
+        );
+        return Response.json([state]);
+      }
+      throw new Error("Unexpected RPC.");
+    }
+    const rows = tables[table];
+    const selected = rows.filter((row) =>
+      [...url.searchParams].every(([key, value]) =>
+        key === "select" || String(row[key]) === value.slice(3)
+      )
+    );
+    if (request.method === "GET") {
+      return Response.json(
+        JSON.parse(
+          JSON.stringify(
+            selected,
+            (_key, node) =>
+              node && typeof node === "object" && !Array.isArray(node)
+                ? Object.fromEntries(
+                  Object.keys(node).sort().map((key) => [key, node[key]]),
+                )
+                : node,
+          ),
+        ),
+      );
+    }
+    if (request.method === "DELETE") {
+      for (const row of selected) rows.splice(rows.indexOf(row), 1);
+      return Response.json(selected);
+    }
+    const body = await request.json();
+    if (request.method === "PATCH") {
+      for (const row of selected) {
+        Object.assign(row, body, { revision: Number(row.revision) + 1 });
+      }
+      return Response.json(selected);
+    }
+    const row = {
+      id: crypto.randomUUID(),
+      ciphertext: null,
+      account_label: null,
+      endpoint_url: null,
+      provider: null,
+      revision: 0,
+      settings: {},
+      tool_catalog: [],
+      enabled_tools: [],
+      ...body,
+    };
+    rows.push(row);
+    return Response.json([row], { status: 201 });
+  };
+  const config = {
+    projectUrl: "https://project.test",
+    anonKey: "public-key",
+    uiUrl: "https://swarm.test/",
+    endpointUrl: "https://project.test/functions/v1/mcp",
+    clients: {
+      github: {
+        clientId: "fixture-client",
+        clientSecret: "fixture-client-secret",
+      },
+    },
+    customPolicy: {
+      approvedHosts: ["fixture.example"],
+      resolve: () => Promise.resolve(["93.184.216.34"]),
+    },
+  };
+  const store = new ConnectionStore({
+    projectUrl: config.projectUrl,
+    serviceKey: "service-secret",
+    encryptionKey: "a".repeat(64),
+  }, fetcher);
+  const gateway = createGateway(config, store, fetcher);
+  const api = async (
+    user: number,
+    path: string,
+    method = "GET",
+    body?: unknown,
+  ) =>
+    await gateway(
+      new Request(`${config.endpointUrl}/v1/${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer session-${user}`,
+          "Content-Type": "application/json",
+        },
+        ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      }),
+    );
+  const rpc = async (token: string, method: string, params?: unknown) => {
+    const response = await gateway(
+      new Request(config.endpointUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      }),
+    );
+    const text = await response.text();
+    const value = JSON.parse(
+      text.startsWith("event:") || text.startsWith("data:")
+        ? text.split("\n").find((line) => line.startsWith("data:"))!.slice(5)
+        : text,
+    );
+    return { status: response.status, ...value };
+  };
+  const add = async (user: number, name: string) => {
+    const response = await api(user, "connections", "POST", {
+      kind: "native",
+      provider: "github",
+      name,
+      settings: { repositories: ["demo/project"] },
+    });
+    assertEquals(response.status, 201);
+    const { connection } = await response.json();
+    const row = await store.get(users[user], connection.id);
+    await store.saveCredential(row, { accessToken: `${name}-secret` }, name);
+    return connection.id as string;
+  };
+  const key = async (user: number) => {
+    const response = await api(user, "access-keys", "POST");
+    assertEquals(response.status, 201);
+    return await response.json();
+  };
+  return { tables, gateway, store, api, rpc, add, key, config };
+}
+
+Deno.test("accounts and tool controls stay within the authenticated user", async () => {
+  const f = fixture();
+  const first = await f.add(0, "first"),
+    second = await f.add(0, "second"),
+    foreign = await f.add(1, "foreign");
+  const key = await f.key(0);
+  const list = await (await f.api(0, "connections")).json();
+  assertEquals(
+    list.connections.map((row: { id: string }) => row.id).sort(),
+    [first, second].sort(),
+  );
+  assert(!JSON.stringify(list).includes("ciphertext"));
+  assert(!JSON.stringify(list).includes("secret"));
+  for (const id of [foreign, crypto.randomUUID()]) {
+    for (
+      const [suffix, method, body] of [
+        ["", "PATCH", { name: "hijacked" }],
+        ["", "DELETE", undefined],
+        ["/authorize", "POST", undefined],
+        ["/discover", "POST", undefined],
+      ] as const
+    ) {
+      const response = await f.api(
+        0,
+        `connections/${id}${suffix}`,
+        method,
+        body,
+      );
+      assertEquals(response.status, 404);
+      await response.body?.cancel();
+    }
+  }
+  const ambiguous = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project" },
+  });
+  assertEquals(ambiguous.result.isError, true);
+  assertStringIncludes(ambiguous.result.content[0].text, "connection_id");
+  for (const [id, label] of [[first, "first"], [second, "second"]]) {
+    const result = await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project", connection_id: id },
+    });
+    assertStringIncludes(result.result.content[0].text, `${label}-secret`);
+  }
+  const blocked = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", connection_id: foreign },
+  });
+  assertEquals(blocked.result.isError, true);
+  for (const id of [first, second]) {
+    const r = await f.api(0, `connections/${id}`, "PATCH", {
+      enabledTools: [],
+    });
+    assertEquals(r.status, 200);
+    await r.body?.cancel();
+  }
+  assertEquals(
+    (await f.rpc(key.token, "tools/list")).result.tools.map((
+      tool: { name: string },
+    ) => tool.name),
+    ["hub_status"],
+  );
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project", connection_id: first },
+    })).result.isError,
+    true,
+  );
+  const other = await f.key(1);
+  assertEquals((await f.rpc(other.token, "tools/list")).result.tools.length, 2);
+});
+
+Deno.test("keys reveal a token once and revocation stops its next call", async () => {
+  const f = fixture(), key = await f.key(0);
+  assertEquals(
+    await digest(key.token),
+    f.tables.swarm_user_mcp_keys[0].token_hash,
+  );
+  assert(!JSON.stringify(f.tables).includes(key.token));
+  assertStringIncludes(
+    key.configuration.mcpServers.swarm.headers.Authorization,
+    `Bearer ${key.token}`,
+  );
+  const foreign = await f.api(1, `access-keys/${key.id}`, "DELETE");
+  assertEquals(foreign.status, 404);
+  await foreign.body?.cancel();
+  assertEquals((await f.rpc(key.token, "tools/list")).status, 200);
+  assertEquals((await f.api(0, `access-keys/${key.id}`, "DELETE")).status, 204);
+  assertEquals((await f.rpc(key.token, "tools/list")).status, 401);
+  assertEquals((await f.rpc("b".repeat(64), "tools/list")).status, 401);
+});
+
+Deno.test("forwarded provider callbacks cannot save another browser's credentials", async () => {
+  const f = fixture(), first = await f.add(0, "first");
+  const start = await (await f.api(0, `connections/${first}/authorize`, "POST"))
+    .json();
+  const state = new URL(start.authorizationUrl).searchParams.get("state")!;
+  const redirect = await f.gateway(
+    new Request(
+      `${f.config.endpointUrl}/callback/github?state=${state}&code=fixture-code`,
+    ),
+  );
+  assertEquals(redirect.status, 303);
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+    "first-secret",
+  );
+  assert(!start.authorizationUrl.includes(start.completionSecret));
+  const complete = {
+    provider: "github",
+    state,
+    code: "fixture-code",
+    verifier: start.completionSecret,
+  };
+  for (
+    const [user, body, status] of [
+      [9, complete, 401],
+      [1, complete, 400],
+      [0, { ...complete, verifier: "b".repeat(64) }, 400],
+      [0, { ...complete, verifier: undefined }, 400],
+      [0, { ...complete, provider: "slack" }, 400],
+    ] as const
+  ) {
+    const response = await f.api(user, "oauth/complete", "POST", body);
+    assertEquals(response.status, status);
+    await response.body?.cancel();
+    assertEquals(
+      (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+      "first-secret",
+    );
+  }
+  const success = await f.api(0, "oauth/complete", "POST", complete);
+  assertEquals(success.status, 200);
+  await success.body?.cancel();
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+    "provider-secret",
+  );
+});
+
+Deno.test("OAuth states bind callbacks to one account and cannot be replayed", async () => {
+  const f = fixture(),
+    first = await f.add(0, "first"),
+    second = await f.add(0, "second");
+  const response = await f.api(0, `connections/${first}/authorize`, "POST");
+  const { authorizationUrl, completionSecret } = await response.json();
+  const state = new URL(authorizationUrl).searchParams.get("state")!;
+  const callback = () =>
+    f.api(0, "oauth/complete", "POST", {
+      provider: "github",
+      state,
+      code: "fixture-code",
+      verifier: completionSecret,
+    });
+  const done = await callback();
+  assertEquals(done.status, 200);
+  await done.body?.cancel();
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+    "provider-secret",
+  );
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], second)))?.accessToken,
+    "second-secret",
+  );
+  const replay = await callback();
+  assertEquals(replay.status, 400);
+  await replay.body?.cancel();
+  const next = await (await f.api(0, `connections/${first}/authorize`, "POST"))
+    .json();
+  const nextState = new URL(next.authorizationUrl).searchParams.get("state");
+  await f.api(0, `connections/${first}`, "DELETE");
+  const removed = await f.api(0, "oauth/complete", "POST", {
+    provider: "github",
+    state: nextState,
+    code: "fixture-code",
+    verifier: next.completionSecret,
+  });
+  assertEquals(removed.status, 400);
+  await removed.body?.cancel();
+});
+
+Deno.test("ciphertext cannot move to another user or connection", async () => {
+  const f = fixture(),
+    first = await f.add(0, "first"),
+    second = await f.add(0, "second"),
+    foreign = await f.add(1, "foreign");
+  const ciphertext = (await f.store.get(users[0], first)).ciphertext;
+  for (const id of [second, foreign]) {
+    const row = f.tables.swarm_user_connections.find((row) => row.id === id)!;
+    row.ciphertext = ciphertext;
+    let failed = false;
+    try {
+      await f.store.secret(row as Connection);
+    } catch {
+      failed = true;
+    }
+    assert(failed);
+  }
+});
+
+Deno.test("custom tools require selection and use only their upstream credential", async () => {
+  const upstream = createApp({
+    accessToken: "u".repeat(64),
+    githubToken: "custom-account",
+    githubRepositories: ["demo/project"],
+  }, () => Promise.resolve(Response.json([])));
+  const server = Deno.serve(
+    { hostname: "127.0.0.1", port: 0, onListen() {} },
+    upstream,
+  );
+  const base = `http://127.0.0.1:${server.addr.port}/mcp`;
+  try {
+    const f = fixture((_input, init) => {
+      assertEquals(
+        new Headers(init?.headers).get("Authorization"),
+        `Bearer ${"u".repeat(64)}`,
+      );
+      return fetch(base, init);
+    });
+    const response = await f.api(0, "connections", "POST", {
+      kind: "mcp",
+      name: "Fixture",
+      endpointUrl: "https://fixture.example/mcp",
+      bearerToken: "u".repeat(64),
+    });
+    assertEquals(response.status, 201);
+    const { connection } = await response.json();
+    const key = await f.key(0);
+    assertEquals((await f.rpc(key.token, "tools/list")).result.tools.length, 1);
+    const discovery = await f.api(
+      0,
+      `connections/${connection.id}/discover`,
+      "POST",
+    );
+    assertEquals(discovery.status, 200);
+    const { tools } = await discovery.json();
+    const tool = tools.find((tool: { name: string }) =>
+      tool.name === "github_list_pull_requests"
+    );
+    assert(tool.id.startsWith(`custom_${connection.id.replaceAll("-", "")}_`));
+    assertEquals((await f.rpc(key.token, "tools/list")).result.tools.length, 1);
+    const selected = await f.api(0, `connections/${connection.id}`, "PATCH", {
+      enabledTools: [tool.id],
+    });
+    assertEquals(selected.status, 200);
+    await selected.body?.cancel();
+    assertEquals((await f.rpc(key.token, "tools/list")).result.tools.length, 2);
+    const called = await f.rpc(key.token, "tools/call", {
+      name: tool.id,
+      arguments: { owner: "demo", repo: "project" },
+    });
+    assertEquals(called.result.isError, undefined);
+    assertEquals(called.result.content[0].text, "[]");
+    const replaced = await f.api(0, `connections/${connection.id}`, "PATCH", {
+      bearerToken: "",
+    });
+    assertEquals(replaced.status, 200);
+    await replaced.body?.cancel();
+    assertEquals((await f.rpc(key.token, "tools/list")).result.tools.length, 1);
+    assert(
+      (await f.rpc(key.token, "tools/call", { name: tool.id, arguments: {} }))
+        .error,
+    );
+  } finally {
+    await server.shutdown();
+  }
+});
+
+for (
+  const endpointUrl of [
+    "http://fixture.example/mcp",
+    "https://127.0.0.1/mcp",
+    "https://169.254.169.254/mcp",
+    "https://unapproved.example/mcp",
+    "https://user:password@fixture.example/mcp",
+  ]
+) {
+  Deno.test(`custom destinations reject ${endpointUrl}`, async () => {
+    const f = fixture();
+    const response = await f.api(0, "connections", "POST", {
+      kind: "mcp",
+      name: "Unsafe",
+      endpointUrl,
+    });
+    assertEquals(response.status, 400);
+    await response.body?.cancel();
+    assertEquals(f.tables.swarm_user_connections.length, 0);
+  });
+}
+
+function protocolFixture(options: {
+  streaming?: boolean;
+  malformed?: boolean;
+  oversized?: boolean;
+  beforeCall?: () => Promise<void>;
+  onList?: () => Promise<void>;
+} = {}) {
+  return async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const message = await new Response(init?.body).json();
+    if (message.id === undefined) return new Response(null, { status: 204 });
+    let result: unknown;
+    if (message.method === "initialize") {
+      result = {
+        protocolVersion: message.params.protocolVersion,
+        capabilities: { tools: {} },
+        serverInfo: { name: "fixture", version: "1" },
+      };
+    }
+    if (message.method === "tools/list") {
+      await options.onList?.();
+      result = options.malformed ? { tools: "invalid" } : {
+        tools: [{
+          name: message.params?.cursor ? "second_page" : "first_page",
+          description: options.oversized
+            ? "x".repeat(270_000)
+            : "Read fixture data",
+          inputSchema: { type: "object", properties: {} },
+        }],
+        ...(message.params?.cursor ? {} : { nextCursor: "second" }),
+      };
+    }
+    if (message.method === "tools/call") {
+      await options.beforeCall?.();
+      result = { content: [{ type: "text", text: "fixture-result" }] };
+    }
+    const value = JSON.stringify({ jsonrpc: "2.0", id: message.id, result });
+    if (options.streaming) {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(
+              new TextEncoder().encode(`event: message\ndata: ${value}\n\n`),
+            );
+          },
+        }),
+        { headers: { "Content-Type": "text/event-stream" } },
+      );
+    }
+    return new Response(value, {
+      headers: { "Content-Type": "application/json" },
+    });
+  };
+}
+
+for (const streaming of [false, true]) {
+  Deno.test(`custom tools execute from later catalog pages with ${streaming ? "open SSE" : "JSON"} responses`, async () => {
+    const f = fixture(protocolFixture({ streaming }));
+    const created = await (await f.api(0, "connections", "POST", {
+      kind: "mcp",
+      name: "Paged",
+      endpointUrl: "https://fixture.example/mcp",
+    })).json();
+    const id = created.connection.id;
+    const discovery = await f.api(0, `connections/${id}/discover`, "POST");
+    assertEquals(discovery.status, 200);
+    const { tools } = await discovery.json();
+    const second = tools.find((tool: { name: string }) =>
+      tool.name === "second_page"
+    );
+    const selected = await f.api(0, `connections/${id}`, "PATCH", {
+      enabledTools: [second.id],
+    });
+    await selected.body?.cancel();
+    const key = await f.key(0);
+    const called = await f.rpc(key.token, "tools/call", {
+      name: second.id,
+      arguments: {},
+    });
+    assertEquals(called.result.isError, undefined);
+    assertEquals(called.result.content[0].text, "fixture-result");
+  });
+}
+
+Deno.test("custom permissions are checked after upstream catalog work", async () => {
+  let calls = 0, lists = 0;
+  const f = fixture(protocolFixture({
+    onList: async () => {
+      if (++lists === 3) await disable?.();
+    },
+    beforeCall: () => {
+      calls++;
+      return Promise.resolve();
+    },
+  }));
+  const created = await (await f.api(0, "connections", "POST", {
+    kind: "mcp",
+    name: "Mutable",
+    endpointUrl: "https://fixture.example/mcp",
+  })).json();
+  const id = created.connection.id;
+  const { tools } = await (await f.api(0, `connections/${id}/discover`, "POST"))
+    .json();
+  const selected = await f.api(0, `connections/${id}`, "PATCH", {
+    enabledTools: [tools[0].id],
+  });
+  await selected.body?.cancel();
+  const disable = async () => {
+    const response = await f.api(0, `connections/${id}`, "PATCH", {
+      enabledTools: [],
+    });
+    await response.body?.cancel();
+  };
+  const key = await f.key(0);
+  const called = await f.rpc(key.token, "tools/call", {
+    name: tools[0].id,
+    arguments: {},
+  });
+  assertEquals(called.result.isError, true);
+  assertEquals(calls, 0);
+});
+
+for (
+  const mode of ["malformed", "oversized", "private DNS", "redirect"] as const
+) {
+  Deno.test(`a custom ${mode} response fails without breaking other connections`, async () => {
+    const f = fixture(
+      mode === "redirect"
+        ? () =>
+          Promise.resolve(
+            new Response(null, {
+              status: 302,
+              headers: { Location: "https://127.0.0.1/private" },
+            }),
+          )
+        : protocolFixture({
+          malformed: mode === "malformed",
+          oversized: mode === "oversized",
+        }),
+    );
+    if (mode === "private DNS") {
+      f.config.customPolicy.resolve = () => Promise.resolve(["127.0.0.1"]);
+    }
+    const created = await (await f.api(0, "connections", "POST", {
+      kind: "mcp",
+      name: "Broken",
+      endpointUrl: "https://fixture.example/mcp",
+    })).json();
+    const discovery = await f.api(
+      0,
+      `connections/${created.connection.id}/discover`,
+      "POST",
+    );
+    assertEquals(
+      discovery.status,
+      mode === "private DNS" || mode === "oversized" ? 400 : 502,
+    );
+    await discovery.body?.cancel();
+    const key = await f.key(0);
+    assertEquals((await f.rpc(key.token, "tools/list")).status, 200);
+  });
+}
+
+Deno.test("a custom server that sends no response reaches the deadline", async () => {
+  const f = fixture(async (_input, init) => {
+    const message = await new Response(init?.body).json();
+    if (message.method !== "tools/list") {
+      return await protocolFixture()(_input, init);
+    }
+    return new Response(new ReadableStream(), {
+      headers: { "Content-Type": "text/event-stream" },
+    });
+  });
+  const created = await (await f.api(0, "connections", "POST", {
+    kind: "mcp",
+    name: "Slow",
+    endpointUrl: "https://fixture.example/mcp",
+  })).json();
+  const response = await f.api(
+    0,
+    `connections/${created.connection.id}/discover`,
+    "POST",
+  );
+  assertEquals(response.status, 502);
+  await response.body?.cancel();
+  assertEquals((await f.api(0, "connections")).status, 200);
+});

@@ -1,0 +1,91 @@
+{
+  "answer": "### 1. Observable Done Checks\n\n* **Automated Deno Test Suite**: `deno test --allow-env --allow-net` in `supabase/functions/mcp/` passes cleanly across Zod schema validation, tool filtering, and custom MCP proxy resolvers [1].\n* **Backward-Compatibility Verification**: Integration tests verify that the legacy single-provider lookup and global agent token continue to return valid responses from all four existing read adapters without throwing 401 or schema mismatch errors [2, 3].\n* **Multi-Account Creation**: Verified ability in Supabase to connect multiple accounts for a single provider (e.g., two GitHub accounts) under distinct `connection_id`s without credential overwrites [4].\n* **Per-Connection Tool Toggling**: Disabling a tool in the database excludes it from the `tools/list` response emitted by the single Swarm endpoint [5, 6].\n* **Custom Hosted MCP Endpoint Proxying**: The Swarm endpoint successfully proxies tool definitions and executions to user-configured custom hosted MCP servers [7].\n* **Secret & Maintainability Hygiene**: Static security sensors (`gitleaks`) verify no credentials or static tokens are committed in static HTML/JS assets [1].\n\n---\n\n### 2. Simplest Expert Approach & One Routing Point\n\nApplying **Parallel Change (Expand–Migrate–Contract)** avoiding a full rewrite [8, 9]:\n\n1. **Expand**: Augment the `connections` schema from a `(user_id, provider)` unique key to a unique `connection_id` primary key, adding `account_label`, `enabled_tools`, and a separate `custom_mcp_servers` table [4]. Maintain a fallback query path for legacy requests missing an explicit `connection_id` [4, 10].\n2. **Migrate**: Update the static web interface to manage discrete connections and update the Swarm endpoint to accept optional connection scoping while defaulting seamlessly for legacy tokens [11].\n3. **Contract**: (Deferred) Keep legacy provider-fallback lookups until the signup beta is stable [11, 12].\n\n**The One Place That Drives Routing**:  \nThe **Connection Resolver / Toggle Router** inside `supabase/functions/mcp/resolver.ts` [5, 6]. It decouples tool decision logic from calling code, resolving user identity, connection targets, active tool toggles, and upstream custom server endpoints in a single centralized module [6, 13].\n\n---\n\n### 3. Prerequisites\n\n* **Clean Baseline**: All existing 4 read adapters, OAuth callback handlers, and race-protection suites must pass cleanly before schema or routing edits begin [1, 14].\n* **Database Snapshot & Rollback Boundary**: Backup of existing personal connections and encryption keys [3].\n* **Permissioning Toggles**: A static feature flag isolating beta signup routes and multi-account UI controls from the existing personal owner session [15, 16].\n\n---\n\n### 4. Real Failure Modes & Detection Checks\n\n| Failure Mode | Risk / Impact | Detection Check / Sensor | Source Reference |\n| :--- | :--- | :--- | :--- |\n| **OAuth / Reconnect Race Condition** | Concurrent OAuth flows overwrite tokens across distinct accounts of the same provider. | **Integration Test**: Assert OAuth state tokens bind explicitly to a unique `connection_id` session [14]. | |\n| **Broken Legacy Agent Setup** | Removing `(user_id, provider)` direct lookups breaks existing global agent token calls. | **Regression Test**: Execute legacy single-provider agent requests without `connection_id` headers [3]. | |\n| **Un-asserted Tool Toggling** | Disabling a tool in the UI updates the DB, but the Swarm endpoint still exposes or executes it. | **Mutation Testing (Stryker/Deno)**: Mutate tool filter logic to confirm tests fail when disabled tools execute [17]. | |\n| **Credential Leakage to Custom MCPs** | Proxying calls to custom hosted MCP servers leaks user credentials or Supabase keys in headers. | **Static Dependency & Import Rules**: Enforce header sanitization prior to outbound fetch calls [1, 18]. | |\n\n---\n\n### 5. Frozen Contracts Across Disjoint Contexts\n\nTo allow database migrations, gateway functions, and static web pages to be built independently without integration friction, freeze these schemas up front:\n\n* **Database (`supabase/migrations/`)**:\n  * `connections`: `(connection_id UUID PK, user_id UUID, provider TEXT, account_label TEXT, encrypted_credentials TEXT, enabled_tools JSONB, is_active BOOL)`.\n  * `custom_mcp_servers`: `(server_id UUID PK, user_id UUID, name TEXT, endpoint_url TEXT, auth_header TEXT)`.\n* **Gateway (`supabase/functions/mcp/`)**:\n  * `resolveConnection(userId: string, target: { connectionId?: string; provider?: string })` interface [6].\n  * Unified Swarm endpoint (`POST /mcp/swarm`) payload & header contract (`X-Agent-Token`, optional `X-Connection-ID`).\n* **Static Web (`web/`)**:\n  * Plain JavaScript Supabase client RPC signatures for listing connections, updating `enabled_tools` arrays, creating `custom_mcp_servers` records, and initiating OAuth redirects.\n\n---\n\n### Challenge to Unnecessary Work\n\n* **Reject Framework Rewrites**: Converting static `web/` HTML/JS to React, Svelte, or Next.js adds unnecessary build complexity and carrying costs [9, 19].\n* **Reject Billing & Team Abstractions**: Multi-tenant RBAC, team workspaces, and payment gateways are completely out of scope for a Connections-only signup beta [9, 20].\n\n---\n\n💡 **Suggested Next Step**: Would you like to draft the exact Deno Zod schema for the Connection Resolver or the SQL migration script for `connection_id` multi-account expansion?",
+  "references": [
+    {
+      "citation_number": 1,
+      "source_id": "7690fcf3-6790-4319-8075-6bf2e30e18b8",
+      "cited_text": "During coding session Sensors that run continuously alongside the agent to provide fast feedback. Type checker (computational) ESLint (computational) Semgrep,"
+    },
+    {
+      "citation_number": 2,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c"
+    },
+    {
+      "citation_number": 3,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527",
+      "cited_text": "This pattern is particularly useful when practicing ContinuousDelivery because it allows your code to be released in any of these"
+    },
+    {
+      "citation_number": 4,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527"
+    },
+    {
+      "citation_number": 5,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c",
+      "cited_text": "We've now introduced a featureIsEnabled function, a Toggle Router which can be used to dynamically control which codepath is live."
+    },
+    {
+      "citation_number": 6,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c"
+    },
+    {
+      "citation_number": 7,
+      "source_id": "505e47f5-642a-400c-8869-f366b5d6283c",
+      "cited_text": "1: This technique has been around for a long time, although it never got a popular name. Paul Hammant introduced"
+    },
+    {
+      "citation_number": 8,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527"
+    },
+    {
+      "citation_number": 9,
+      "source_id": "c426969b-4ed4-425d-a437-dd5c51acf238",
+      "cited_text": "The Legacy Replacement Treadmill We have worked with many organizations who have made multiple attempts at removing legacy systems. In"
+    },
+    {
+      "citation_number": 10,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527"
+    },
+    {
+      "citation_number": 11,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527"
+    },
+    {
+      "citation_number": 12,
+      "source_id": "d962573d-5e5a-4f49-b20b-118d38504527"
+    },
+    {
+      "citation_number": 13,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c"
+    },
+    {
+      "citation_number": 14,
+      "source_id": "7690fcf3-6790-4319-8075-6bf2e30e18b8"
+    },
+    {
+      "citation_number": 15,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c"
+    },
+    {
+      "citation_number": 16,
+      "source_id": "96b19845-82b6-4d10-b8cb-2846d812cd8c"
+    },
+    {
+      "citation_number": 17,
+      "source_id": "7690fcf3-6790-4319-8075-6bf2e30e18b8"
+    },
+    {
+      "citation_number": 18,
+      "source_id": "7690fcf3-6790-4319-8075-6bf2e30e18b8"
+    },
+    {
+      "citation_number": 19,
+      "source_id": "c426969b-4ed4-425d-a437-dd5c51acf238"
+    },
+    {
+      "citation_number": 20,
+      "source_id": "c426969b-4ed4-425d-a437-dd5c51acf238"
+    }
+  ],
+  "note": "Retrieved guidance, not verified repository facts. Exact contracts are design decisions in the plan."
+}
