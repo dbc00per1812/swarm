@@ -2,10 +2,11 @@
 
 ## Current increment
 
-All three increments are complete, deployed, and verified. Code, JavaScript, and
-security reviews pass. Six page tests and all 39 gateway tests pass. Desktop and
-mobile browser checks pass against production. See
-`connections-beta.web-review.md` for the evidence.
+All three increments are implemented. The final technical release review is
+complete, including the OAuth account-linking correction. All 40 gateway tests
+and 13 page tests pass. Twelve new hosted database assertions pass. See
+`connections-beta.release-review.md` for the latest evidence and release limits.
+The named release approval remains separate. Keep pull request 4 as a draft.
 
 The owner approved GitHub read-only email access. Production social sign-in,
 session reload, sign-out, and repeat sign-in pass. Reload restored all four
@@ -48,10 +49,11 @@ remains unchanged.
 
 ## Storage
 
-Both migrations are installed and registered in remote migration history:
+All three migrations are installed and registered in remote migration history:
 
 - `20261015191814_user_connections.sql`.
 - `20261015193609_legacy_user_import.sql`.
+- `20261015210000_bound_oauth_completion.sql`.
 
 The gateway imported four legacy connections in one transaction. It bound the
 original token hash to the confirmed owner. Credentials use AES-GCM with the
@@ -81,7 +83,10 @@ Use the C2 routes in the plan. All routes are implemented:
   the custom bearer credential.
 - `DELETE /v1/connections/:id` removes the account and its pending
   authorization.
-- `POST /v1/connections/:id/authorize` returns `{ authorizationUrl }`.
+- `POST /v1/connections/:id/authorize` returns
+  `{ authorizationUrl, completionSecret }`.
+- `POST /v1/oauth/complete` requires the initiating session, provider, state,
+  code, and browser verifier. The public callback only returns to the website.
 - `POST /v1/connections/:id/discover` returns `{ tools }`.
 - `POST /v1/access-keys` returns `{ id, token, endpointUrl, configuration }`.
 - `DELETE /v1/access-keys/:id` revokes the key.
@@ -106,9 +111,8 @@ accounts require explicit selection. Custom tools have stable names defined by
 C3 in the plan.
 
 The old `/signin`, `/connections`, `/connect/:provider`, and
-`/disconnect/:provider` browser routes are no longer supported. Update
-`web/app.js` immediately. Provider callbacks remain at `/callback/:provider` and
-return to `callback.html`.
+`/disconnect/:provider` browser routes are no longer supported. Provider
+callbacks remain at `/callback/:provider` and return to `callback.html`.
 
 ## Custom destination restriction
 
@@ -123,9 +127,11 @@ Do not claim support for arbitrary public servers.
 
 ## Verification
 
-- `deno task test`: 39 passing tests, including the existing 20 tests.
+- `deno task test`: 40 passing tests, including the existing 20 tests.
 - `deno task check`, `deno lint`, and formatting checks pass.
-- Hosted Postgres: 26 storage assertions and 12 import assertions pass.
+- Hosted Postgres: 26 storage assertions, 12 import assertions, and 12 bound
+  OAuth completion assertions pass.
+- `npm test`: 13 passing page tests.
 - Database tests use rollback transactions. Never reset the hosted database.
 - Ownership and schema-ordering mutations make the relevant tests fail.
 - Code, TypeScript, and security reviews found no remaining blockers.
@@ -164,9 +170,10 @@ No paid purchase or upgrade is authorized.
 ## Increment 3 state
 
 - GitHub Pages serves the new website from `gh-pages` deployment commit
-  `3b601426cb73d91abd399c5971f1fd0534c848b3`.
+  `5fe41b88ee9607b3186f6208304a2d83c9ed63d8`.
+- The production gateway is active at version 14.
 - Build with `npm ci` and `npm test`. Publish the six files listed in
-  `docs/mcp-poc.md`, including `web/dist/app.js`.
+  `docs/mcp-poc.md`, including both browser bundles.
 - Supabase GitHub Auth is enabled with the existing private client pair. The
   GitHub app retains its service callback and adds `/auth/v1/callback`.
 - Slack public distribution and Linear public availability are enabled. Actual
@@ -186,3 +193,19 @@ human provider account, a paid sender, or a service upgrade.
 
 Keep the pull request as a draft until the required release review. Do not merge
 without that review. Keep Claude configuration and the Muse connector unchanged.
+
+## Release review follow-up
+
+The final review corrected a forwarded provider-link account-linking issue.
+Provider completion now requires the initiating user and a separate browser
+proof. A real provider popup and subsequent agent read passed in production. The
+parent page required its supported Refresh accounts control in that check.
+
+The earlier private credential-output incident remains open. Credential rotation
+has not been verified. Technical review completion does not close that incident.
+The named release approver must consider this operational item.
+
+The user authorized lightweight team functionality after this review. Continue
+from the reviewed release commit on a separate branch. Use the accepted scope
+and increment boundaries in the team handoff. Start a new chat after each
+completed increment and continue automatically. Keep the existing release gate.

@@ -132,9 +132,10 @@ function fixture(upstream?: typeof fetch) {
         });
         return Response.json(row.revision);
       }
-      if (table === "swarm_user_consume_oauth") {
+      if (table === "swarm_user_complete_oauth") {
         const state = tables.swarm_user_oauth_states.find((state) =>
-          state.state_hash === body.p_state_hash
+          state.state_hash === body.p_state_hash &&
+          state.user_id === body.p_user_id && state.verifier === body.p_verifier
         );
         const connection = state &&
           rows.find((row) =>
@@ -373,21 +374,70 @@ Deno.test("keys reveal a token once and revocation stops its next call", async (
   assertEquals((await f.rpc("b".repeat(64), "tools/list")).status, 401);
 });
 
+Deno.test("forwarded provider callbacks cannot save another browser's credentials", async () => {
+  const f = fixture(), first = await f.add(0, "first");
+  const start = await (await f.api(0, `connections/${first}/authorize`, "POST"))
+    .json();
+  const state = new URL(start.authorizationUrl).searchParams.get("state")!;
+  const redirect = await f.gateway(
+    new Request(
+      `${f.config.endpointUrl}/callback/github?state=${state}&code=fixture-code`,
+    ),
+  );
+  assertEquals(redirect.status, 303);
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+    "first-secret",
+  );
+  assert(!start.authorizationUrl.includes(start.completionSecret));
+  const complete = {
+    provider: "github",
+    state,
+    code: "fixture-code",
+    verifier: start.completionSecret,
+  };
+  for (
+    const [user, body, status] of [
+      [9, complete, 401],
+      [1, complete, 400],
+      [0, { ...complete, verifier: "b".repeat(64) }, 400],
+      [0, { ...complete, verifier: undefined }, 400],
+      [0, { ...complete, provider: "slack" }, 400],
+    ] as const
+  ) {
+    const response = await f.api(user, "oauth/complete", "POST", body);
+    assertEquals(response.status, status);
+    await response.body?.cancel();
+    assertEquals(
+      (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+      "first-secret",
+    );
+  }
+  const success = await f.api(0, "oauth/complete", "POST", complete);
+  assertEquals(success.status, 200);
+  await success.body?.cancel();
+  assertEquals(
+    (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
+    "provider-secret",
+  );
+});
+
 Deno.test("OAuth states bind callbacks to one account and cannot be replayed", async () => {
   const f = fixture(),
     first = await f.add(0, "first"),
     second = await f.add(0, "second");
   const response = await f.api(0, `connections/${first}/authorize`, "POST");
-  const { authorizationUrl } = await response.json();
+  const { authorizationUrl, completionSecret } = await response.json();
   const state = new URL(authorizationUrl).searchParams.get("state")!;
   const callback = () =>
-    f.gateway(
-      new Request(
-        `${f.config.endpointUrl}/callback/github?state=${state}&code=fixture-code`,
-      ),
-    );
+    f.api(0, "oauth/complete", "POST", {
+      provider: "github",
+      state,
+      code: "fixture-code",
+      verifier: completionSecret,
+    });
   const done = await callback();
-  assertEquals(done.status, 303);
+  assertEquals(done.status, 200);
   await done.body?.cancel();
   assertEquals(
     (await f.store.secret(await f.store.get(users[0], first)))?.accessToken,
@@ -404,11 +454,12 @@ Deno.test("OAuth states bind callbacks to one account and cannot be replayed", a
     .json();
   const nextState = new URL(next.authorizationUrl).searchParams.get("state");
   await f.api(0, `connections/${first}`, "DELETE");
-  const removed = await f.gateway(
-    new Request(
-      `${f.config.endpointUrl}/callback/github?state=${nextState}&code=fixture-code`,
-    ),
-  );
+  const removed = await f.api(0, "oauth/complete", "POST", {
+    provider: "github",
+    state: nextState,
+    code: "fixture-code",
+    verifier: next.completionSecret,
+  });
   assertEquals(removed.status, 400);
   await removed.body?.cancel();
 });

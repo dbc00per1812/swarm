@@ -368,3 +368,58 @@ test("A browser storage failure keeps the new token and revocation control avail
     p.close();
   }
 });
+
+for (const unavailable of [false, true]) {
+  test(`Provider authorization keeps browser proof separate from the URL (storage unavailable: ${unavailable})`, async () => {
+    const state = "1".repeat(64), verifier = "a".repeat(64);
+    const p = await page(undefined, (path) => {
+      if (path.endsWith("/authorize")) {
+        return Response.json({
+          authorizationUrl:
+            `https://github.com/login/oauth/authorize?state=${state}`,
+          completionSecret: verifier,
+        });
+      }
+    });
+    const proof = new Map();
+    const popup = {
+      location: "about:blank",
+      closed: false,
+      close() {
+        this.closed = true;
+      },
+      sessionStorage: {
+        setItem(key, value) {
+          if (unavailable) throw new Error("Storage fixture blocked");
+          proof.set(key, value);
+        },
+      },
+    };
+    p.w.open = () => popup;
+    try {
+      await signIn(p.w);
+      p.w.document.querySelector("article.service .actions button").click();
+      await until(() =>
+        p.w.document.querySelector("article.service .actions button")
+          .getAttribute("aria-disabled") === "false"
+      );
+      if (unavailable) {
+        assert.equal(popup.closed, true);
+        assert.equal(popup.location, "about:blank");
+        assert.match(
+          p.w.document.querySelector("#error").textContent,
+          /storage is unavailable/,
+        );
+      } else {
+        assert.deepEqual(JSON.parse(proof.get(`swarm-oauth:${state}`)), {
+          userId: user.id,
+          verifier,
+        });
+        assert.ok(!popup.location.includes(verifier));
+        assert.ok(popup.location.startsWith("https://github.com/"));
+      }
+    } finally {
+      p.close();
+    }
+  });
+}

@@ -209,18 +209,25 @@ export class UserStore {
       }),
     });
   }
-  async consume(state: string, provider: string) {
+  async consume(
+    user: string,
+    state: string,
+    provider: string,
+    verifier: string,
+  ) {
     const rows = z.array(z.object({
       user_id: z.uuid(),
       connection_id: z.uuid(),
       verifier: z.string(),
       revision: z.number(),
     })).parse(
-      await this.request("rpc/swarm_user_consume_oauth", {
+      await this.request("rpc/swarm_user_complete_oauth", {
         method: "POST",
         body: JSON.stringify({
+          p_user_id: z.uuid().parse(user),
           p_state_hash: await digest(state),
           p_provider: provider,
+          p_verifier: verifier,
         }),
       }),
     );

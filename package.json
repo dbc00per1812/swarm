@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild web/app.js --bundle --minify --format=iife --target=es2022 --outfile=web/dist/app.js",
+    "build": "esbuild web/app.js web/callback.js --bundle --minify --format=iife --target=es2022 --outdir=web/dist",
     "test": "npm run build && node --test web/tests/*.test.js"
   },
   "dependencies": {

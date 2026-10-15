@@ -16,8 +16,8 @@ npm ci
 npm test
 ```
 
-Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`, `callback.js`,
-and `dist/app.js` from `web/`. Keep the `dist/` directory in the published
+Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`, `dist/app.js`,
+and `dist/callback.js` from `web/`. Keep the `dist/` directory in the published
 output. The build bundles the pinned Supabase browser client. Generated files
 stay outside the source branch. GitHub Pages serves the `gh-pages` branch.
 
@@ -117,6 +117,12 @@ Register provider callbacks at
 `SWARM_<PROVIDER>_CLIENT_ID` and `SWARM_<PROVIDER>_CLIENT_SECRET` pair on the
 server.
 
+A provider callback returns its code and state to the website without saving
+credentials. The website completes authorization through an authenticated API
+request. Completion requires the initiating user and a browser proof stored
+before provider navigation. A forwarded provider link cannot supply that proof.
+The server consumes valid state once and checks the connection revision.
+
 Legacy owner settings support the one-time import only. An import marker
 prevents later cold starts from restoring deleted connections or revoked keys.
 The production gateway does not use global service credential fallbacks.
@@ -126,7 +132,7 @@ Run these checks from the repository root:
 ```sh
 deno task test
 deno task check
-deno lint supabase/functions/mcp web/app.js web/tests
+deno lint supabase/functions/mcp web/app.js web/callback.js web/tests
 npm test
 npm audit --audit-level=high
 ```

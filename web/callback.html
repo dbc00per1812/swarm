@@ -5,12 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none'; base-uri 'self'">
-    <title>Swarm — Connection saved</title>
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+    <title>Swarm — Complete connection</title>
     <link rel="stylesheet" href="styles.css">
-    <script type="module" src="callback.js"></script>
+    <script defer src="dist/callback.js"></script>
   </head>
   <body>
-    <main><p class="eyebrow">SWARM</p><h1>Connection saved.</h1><p>You can close this window and return to Swarm.</p><a href="./">Open Swarm</a></main>
+    <main><p class="eyebrow">SWARM</p><h1>Completing connection…</h1><p id="callback-message" role="status" aria-live="polite">Checking your session.</p><a href="./">Open Swarm</a></main>
   </body>
 </html>

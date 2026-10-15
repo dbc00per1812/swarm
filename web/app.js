@@ -253,11 +253,12 @@ function accountCard(connection) {
       button(
         connection.status === "connected" ? "Reconnect" : "Connect",
         async () => {
-          popup = globalThis.open(
+          const authorizationPopup = globalThis.open(
             "about:blank",
-            "swarm-authorization",
+            "_blank",
             "width=640,height=760",
           );
+          popup = authorizationPopup;
           try {
             const value = await api(
               `/connections/${connection.id}/authorize`,
@@ -267,13 +268,34 @@ function accountCard(connection) {
             if (target.protocol !== "https:") {
               throw new Error("The authorization address is invalid.");
             }
-            if (popup) popup.location = target.href;
+            const state = target.searchParams.get("state");
+            if (
+              !/^[a-f0-9]{64}$/.test(state || "") ||
+              !/^[a-f0-9]{64}$/.test(value.completionSecret || "")
+            ) {
+              throw new Error(
+                "The authorization response is invalid. Try again.",
+              );
+            }
+            try {
+              (authorizationPopup
+                ? authorizationPopup.sessionStorage
+                : sessionStorage).setItem(
+                  `swarm-oauth:${state}`,
+                  JSON.stringify({ userId, verifier: value.completionSecret }),
+                );
+            } catch {
+              throw new Error(
+                "Browser storage is unavailable. Allow session storage and try again.",
+              );
+            }
+            if (authorizationPopup) authorizationPopup.location = target.href;
             else location.assign(target.href);
             message(
               "Complete the approval. Then return to Swarm and select Refresh accounts.",
             );
           } catch (error) {
-            popup?.close();
+            authorizationPopup?.close();
             throw error;
           }
         },

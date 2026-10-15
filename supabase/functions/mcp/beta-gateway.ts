@@ -420,34 +420,14 @@ export function createBetaGateway(
         const state = z.string().regex(/^[a-f0-9]{64}$/).parse(
           url.searchParams.get("state"),
         );
-        const consumed = await store.consume(state, provider);
-        const row = await store.get(consumed.user_id, consumed.connection_id);
-        if (row.revision !== consumed.revision) {
-          throw new ApiError("The connection changed. Start again.");
-        }
-        const code = z.string().min(1).max(4096).parse(
-          url.searchParams.get("code"),
-        );
-        const credential = await oauth.exchange(provider, {
-          grant_type: "authorization_code",
-          code,
-          redirect_uri: `${config.endpointUrl}/callback/${provider}`,
-          ...(provider === "slack" ? {} : { code_verifier: consumed.verifier }),
-        });
-        if (
-          provider !== "github" &&
-          !credential.scope?.split(/[ ,]+/).includes(oauth.scopes[provider])
-        ) throw new ApiError("Grant the required read permission.");
-        if (provider === "gmail" && !credential.refreshToken) {
-          throw new ApiError("Grant offline access and try again.");
-        }
-        await store.saveCredential(
-          row,
-          credential,
-          await oauth.label(provider, credential),
-        );
         const target = new URL("callback.html", config.uiUrl);
-        target.searchParams.set("connected", provider);
+        const fragment = new URLSearchParams({ provider, state });
+        if (url.searchParams.has("error")) fragment.set("error", "denied");
+        else {fragment.set(
+            "code",
+            z.string().min(1).max(4096).parse(url.searchParams.get("code")),
+          );}
+        target.hash = fragment.toString();
         return new Response(null, {
           status: 303,
           headers: {
@@ -462,6 +442,47 @@ export function createBetaGateway(
       }
       const user = await identity(request);
       rate(`api:${user}`, 60);
+      if (path === "/v1/oauth/complete" && request.method === "POST") {
+        const value = z.object({
+          provider: providerSchema,
+          state: z.string().regex(/^[a-f0-9]{64}$/),
+          verifier: z.string().regex(/^[a-f0-9]{64}$/),
+          code: z.string().min(1).max(4096),
+        }).strict().parse(await input(request));
+        const consumed = await store.consume(
+          user,
+          value.state,
+          value.provider,
+          value.verifier,
+        );
+        if (consumed.user_id !== user) throw notFound();
+        const row = await store.get(user, consumed.connection_id);
+        if (row.revision !== consumed.revision) {
+          throw new ApiError("The connection changed. Start again.");
+        }
+        const provider = value.provider;
+        const credential = await oauth.exchange(provider, {
+          grant_type: "authorization_code",
+          code: value.code,
+          redirect_uri: `${config.endpointUrl}/callback/${provider}`,
+          ...(provider === "slack" ? {} : { code_verifier: consumed.verifier }),
+        });
+        if (
+          provider !== "github" &&
+          !credential.scope?.split(/[ ,]+/).includes(oauth.scopes[provider])
+        ) {
+          throw new ApiError("Grant the required read permission.");
+        }
+        if (provider === "gmail" && !credential.refreshToken) {
+          throw new ApiError("Grant offline access and try again.");
+        }
+        await store.saveCredential(
+          row,
+          credential,
+          await oauth.label(provider, credential),
+        );
+        return reply({ provider, connectionId: row.id }, 200, cors);
+      }
       if (path === "/v1/connections") {
         if (request.method === "GET") {
           return reply(
@@ -605,6 +626,7 @@ export function createBetaGateway(
                 state,
                 verifier,
               ),
+              completionSecret: verifier,
             },
             200,
             cors,
