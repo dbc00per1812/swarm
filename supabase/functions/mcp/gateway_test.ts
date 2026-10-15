@@ -411,3 +411,13 @@ Deno.test("a delayed refresh cannot replace a newly connected account", async ()
   await late.body?.cancel();
   assertStringIncludes(await (await tool()).text(), "new-account");
 });
+
+Deno.test("Supabase internal function paths expose the same dashboard routes", async () => {
+  const { app } = fixture();
+  const response = await app(new Request("http://edge-runtime/mcp/config", {
+    headers: { Origin: "https://ui.test" },
+  }));
+  assertEquals(response.status, 200);
+  const body = await response.json();
+  assertEquals(body.projectUrl, "https://project.test");
+});

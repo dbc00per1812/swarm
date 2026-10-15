@@ -247,10 +247,14 @@ export function createGateway(
 
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
-    const path = url.pathname.slice(basePath.length).replace(/\/$/, "");
-    if (url.pathname !== basePath && !url.pathname.startsWith(basePath + "/")) {
+    const routeBase = [basePath, basePath.replace(/^\/functions\/v1/, "")]
+      .find((base) =>
+        url.pathname === base || url.pathname.startsWith(base + "/")
+      );
+    if (!routeBase) {
       return reply({ error: "Not found." }, 404);
     }
+    const path = url.pathname.slice(routeBase.length).replace(/\/$/, "");
     if (!path) {
       if (!validBearer(request, config.accessToken)) {
         return createApp(config, fetcher)(request);
