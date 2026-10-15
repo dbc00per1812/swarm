@@ -57,6 +57,13 @@ function fixture(upstream?: typeof fetch) {
     swarm_user_mcp_keys: [],
     swarm_user_oauth_states: [],
   };
+  const access: {
+    available: boolean;
+    member: boolean;
+    ownerMember: boolean;
+    afterRead?: () => void;
+  } = { available: true, member: true, ownerMember: true };
+  const shares = new Map<string, string[]>();
   const fetcher: typeof fetch = async (input, init) => {
     const request = new Request(input, init), url = new URL(request.url);
     if (url.pathname === "/auth/v1/user") {
@@ -100,6 +107,31 @@ function fixture(upstream?: typeof fetch) {
           )?.user_id ?? null,
         );
       }
+      if (table === "swarm_team_connections") {
+        if (!access.available) return Response.json({}, { status: 503 });
+        const response = Response.json(
+          tables.swarm_user_connections.filter((row) =>
+            (!body.p_connection_id || row.id === body.p_connection_id) &&
+            (row.user_id === body.p_user_id ||
+              (access.member && access.ownerMember &&
+                shares.has(String(row.id))))
+          ).map((row) => {
+            if (row.user_id === body.p_user_id) return row;
+            const enabled = (row.enabled_tools as string[]).filter((id) =>
+              shares.get(String(row.id))!.includes(id)
+            );
+            return {
+              ...row,
+              enabled_tools: enabled,
+              tool_catalog: (row.tool_catalog as { id: string }[]).filter((
+                tool,
+              ) => enabled.includes(tool.id)),
+            };
+          }),
+        );
+        access.afterRead?.();
+        return response;
+      }
       const rows = tables.swarm_user_connections;
       const row = rows.find((row) =>
         row.user_id === body.p_user_id && row.id === body.p_connection_id
@@ -110,6 +142,7 @@ function fixture(upstream?: typeof fetch) {
           (body.p_previous_ciphertext &&
             row.ciphertext !== body.p_previous_ciphertext)
         ) return Response.json(false);
+        if (!body.p_refresh) shares.delete(String(row.id));
         Object.assign(row, {
           ciphertext: body.p_ciphertext,
           account_label: body.p_account_label,
@@ -277,7 +310,7 @@ function fixture(upstream?: typeof fetch) {
     assertEquals(response.status, 201);
     return await response.json();
   };
-  return { tables, gateway, store, api, rpc, add, key, config };
+  return { tables, gateway, store, api, rpc, add, key, config, shares, access };
 }
 
 Deno.test("accounts and tool controls stay within the authenticated user", async () => {
@@ -758,4 +791,275 @@ Deno.test("a custom server that sends no response reaches the deadline", async (
   assertEquals(response.status, 502);
   await response.body?.cancel();
   assertEquals((await f.api(0, "connections")).status, 200);
+});
+
+Deno.test("a personal key can discover and execute explicitly shared native tools", async () => {
+  const f = fixture();
+  const id = await f.add(0, "Shared");
+  const key = await f.key(1);
+  f.shares.set(id, ["github_list_pull_requests"]);
+  const tools = await f.rpc(key.token, "tools/list");
+  assert(
+    tools.result.tools.some((tool: { name: string }) =>
+      tool.name === "github_list_pull_requests"
+    ),
+  );
+  const result = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", connection_id: id },
+  });
+  assertEquals(result.result.isError, undefined);
+  const status = await f.rpc(key.token, "tools/call", {
+    name: "hub_status",
+    arguments: {},
+  });
+  const metadata = JSON.parse(status.result.content[0].text);
+  assertEquals(metadata.connections, [{
+    id,
+    name: "Shared",
+    provider: "github",
+    enabledTools: ["github_list_pull_requests"],
+  }]);
+  assert(!JSON.stringify(metadata).includes("secret"));
+  assert(!JSON.stringify(metadata).includes(users[0]));
+  for (
+    const [suffix, method] of [["", "PATCH"], ["", "DELETE"], [
+      "/authorize",
+      "POST",
+    ], ["/discover", "POST"]]
+  ) {
+    const denied = await f.api(
+      1,
+      `connections/${id}${suffix}`,
+      method,
+      method === "PATCH" ? { name: "Foreign" } : undefined,
+    );
+    assertEquals(denied.status, 404);
+    await denied.body?.cancel();
+  }
+});
+
+for (
+  const mode of [
+    "withdrawn",
+    "member removed",
+    "owner departed",
+    "deleted",
+    "disabled",
+    "foreign ID",
+    "unselected",
+    "read failed",
+  ] as const
+) {
+  Deno.test(`shared native tools deny ${mode}`, async () => {
+    let upstream = 0;
+    const f = fixture(() => {
+      upstream++;
+      return Promise.resolve(Response.json([]));
+    });
+    const id = await f.add(0, "Same name");
+    const key = await f.key(1);
+    f.shares.set(id, ["github_list_pull_requests"]);
+    if (mode === "withdrawn") f.shares.delete(id);
+    if (mode === "member removed") f.access.member = false;
+    if (mode === "owner departed") f.access.ownerMember = false;
+    if (mode === "deleted") f.tables.swarm_user_connections.length = 0;
+    if (mode === "disabled") {
+      f.tables.swarm_user_connections[0].enabled_tools = [];
+    }
+    if (mode === "unselected") f.shares.set(id, ["another_tool"]);
+    if (mode === "read failed") f.access.available = false;
+    const result = await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: {
+        owner: "demo",
+        repo: "project",
+        connection_id: mode === "foreign ID" ? crypto.randomUUID() : id,
+      },
+    });
+    assert(result.result?.isError || result.status >= 400);
+    assertEquals(upstream, 0);
+  });
+}
+Deno.test("same-name personal and shared accounts require an explicit connection ID", async () => {
+  const f = fixture();
+  const own = await f.add(1, "Same name"), shared = await f.add(0, "Same name");
+  f.shares.set(shared, ["github_list_pull_requests"]);
+  const key = await f.key(1);
+  const args = { owner: "demo", repo: "project" };
+  const ambiguous = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: args,
+  });
+  assertEquals(ambiguous.result.isError, true);
+  assertStringIncludes(ambiguous.result.content[0].text, "connection_id");
+  for (const id of [own, shared]) {
+    const called = await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { ...args, connection_id: id },
+    });
+    assertEquals(called.result.isError, undefined);
+  }
+});
+for (
+  const stage of [
+    "refresh preparation",
+    "after refresh",
+  ] as const
+) {
+  Deno.test(`native sharing is checked during ${stage}`, async () => {
+    let refreshes = 0, reads = 0;
+    const f = fixture((input) => {
+      if (new URL(String(input)).hostname === "github.com") {
+        refreshes++;
+        if (stage === "after refresh") f.shares.clear();
+        return Promise.resolve(
+          Response.json({ access_token: "refreshed-secret", expires_in: 3600 }),
+        );
+      }
+      reads++;
+      // Return a valid provider response if permission checks permit it.
+      return Promise.resolve(
+        Response.json(
+          Array.from(
+            { length: 10 },
+            (_, i) => ({
+              number: i,
+              title: "Item",
+              html_url: "https://example.test/1",
+              state: "open",
+            }),
+          ),
+        ),
+      );
+    });
+    const id = await f.add(0, "Refresh");
+    const row = await f.store.get(users[0], id);
+    await f.store.saveCredential(row, {
+      accessToken: "expired-secret",
+      refreshToken: "refresh-secret",
+      expiresAt: 1,
+    }, "Same label");
+    f.shares.set(id, ["github_list_pull_requests"]);
+    if (stage === "refresh preparation") {
+      f.access.afterRead = () => f.shares.clear();
+    }
+    const key = await f.key(1);
+    const called = await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project", limit: 15 },
+    });
+    assert(called.result?.isError || called.status >= 400);
+    assertEquals(refreshes, stage === "refresh preparation" ? 0 : 1);
+    assertEquals(reads, 0);
+  });
+}
+
+for (const stage of ["DNS", "catalog", "read failed", "new tool"] as const) {
+  Deno.test(`shared custom tools enforce access after ${stage}`, async () => {
+    let calls = 0, revoke = false;
+    const f = fixture(protocolFixture({
+      onList: () => {
+        if (revoke && (stage === "catalog" || stage === "read failed")) {
+          f.shares.clear();
+          f.access.available = stage !== "read failed";
+        }
+        return Promise.resolve();
+      },
+      beforeCall: () => {
+        calls++;
+        return Promise.resolve();
+      },
+    }));
+    const created = await (await f.api(0, "connections", "POST", {
+      kind: "mcp",
+      name: "Shared MCP",
+      endpointUrl: "https://fixture.example/mcp",
+    })).json();
+    const id = created.connection.id;
+    const { tools } =
+      await (await f.api(0, `connections/${id}/discover`, "POST")).json();
+    await (await f.api(0, `connections/${id}`, "PATCH", {
+      enabledTools: tools.map((t: { id: string }) => t.id),
+    })).body?.cancel();
+    f.shares.set(id, [tools[0].id]);
+    const key = await f.key(1);
+    const listed = (await f.rpc(key.token, "tools/list")).result.tools;
+    assertEquals(
+      listed.map((t: { name: string }) => t.name).sort(),
+      ["hub_status", tools[0].id].sort(),
+    );
+    const success = await f.rpc(key.token, "tools/call", {
+      name: tools[0].id,
+      arguments: {},
+    });
+    assertEquals(success.result.isError, undefined);
+    assertEquals(calls, 1);
+    revoke = true;
+    if (stage === "DNS") {
+      f.config.customPolicy.resolve = () => {
+        f.shares.clear();
+        return Promise.resolve(["93.184.216.34"]);
+      };
+    }
+    const denied = await f.rpc(key.token, "tools/call", {
+      name: stage === "new tool" ? tools[1].id : tools[0].id,
+      arguments: {},
+    });
+    assert(denied.error || denied.result?.isError || denied.status >= 400);
+    assertEquals(calls, 1);
+  });
+}
+
+Deno.test("shared Gmail checks access before each message request", async () => {
+  let reads = 0;
+  const f = fixture(() => {
+    reads++;
+    f.shares.clear();
+    return Promise.resolve(
+      Response.json({ messages: [{ id: "first" }, { id: "second" }] }),
+    );
+  });
+  const created = await (await f.api(0, "connections", "POST", {
+    kind: "native",
+    provider: "gmail",
+    name: "Mail",
+  })).json();
+  const id = created.connection.id;
+  await f.store.saveCredential(await f.store.get(users[0], id), {
+    accessToken: "mail-fixture",
+  }, "Mail");
+  f.shares.set(id, ["gmail_search"]);
+  const key = await f.key(1);
+  const result = await f.rpc(key.token, "tools/call", {
+    name: "gmail_search",
+    arguments: { query: "fixture", limit: 2 },
+  });
+  assertEquals(result.result.isError, true);
+  assertEquals(reads, 1);
+});
+
+Deno.test("routine native refresh preserves sharing through a personal key", async () => {
+  const f = fixture((input) =>
+    Promise.resolve(Response.json(
+      new URL(String(input)).hostname === "github.com"
+        ? { access_token: "refreshed-fixture", expires_in: 3600 }
+        : [],
+    ))
+  );
+  const id = await f.add(0, "Refresh");
+  await f.store.saveCredential(await f.store.get(users[0], id), {
+    accessToken: "expired-fixture",
+    refreshToken: "refresh-fixture",
+    expiresAt: 1,
+  }, "Same name");
+  f.shares.set(id, ["github_list_pull_requests"]);
+  const key = await f.key(1);
+  for (let i = 0; i < 2; i++) {
+    const result = await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project" },
+    });
+    assertEquals(result.result.isError, undefined);
+  }
 });

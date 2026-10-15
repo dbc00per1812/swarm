@@ -257,7 +257,7 @@ Deno.test("organization reads return selected metadata only", async () => {
   assertEquals(JSON.parse(value).organization.shares[0].toolIds, ["read"]);
 });
 
-Deno.test("team storage does not enable shared MCP execution in increment one", async () => {
+Deno.test("a failed sharing permission read denies MCP execution", async () => {
   let upstream = 0;
   const fetcher: typeof fetch = (input) => {
     const url = new URL(String(input));
@@ -267,13 +267,9 @@ Deno.test("team storage does not enable shared MCP execution in increment one", 
     if (url.pathname === "/rest/v1/swarm_user_connections") {
       return Promise.resolve(Response.json([]));
     }
-    if (url.pathname === "/rest/v1/swarm_team_grants") {
+    if (url.pathname === "/rest/v1/rpc/swarm_team_connections") {
       return Promise.resolve(
-        Response.json([{
-          organization_id: org,
-          connection_id: item,
-          tool_ids: ["github_list_pull_requests"],
-        }]),
+        Response.json({ error: "private-fixture" }, { status: 503 }),
       );
     }
     upstream++;
@@ -306,7 +302,7 @@ Deno.test("team storage does not enable shared MCP execution in increment one", 
       }),
     }),
   );
-  assertEquals(response.status, 200);
-  assertEquals((await response.json()).result.isError, true);
+  assertEquals(response.status, 503);
+  assert(!(await response.text()).includes("private-fixture"));
   assertEquals(upstream, 0);
 });

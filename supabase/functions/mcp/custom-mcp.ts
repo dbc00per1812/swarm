@@ -49,6 +49,7 @@ export async function customOperation<T>(
   policy: CustomPolicy,
   action: (client: Client) => Promise<T>,
   fetcher: typeof fetch = fetch,
+  authorize?: () => Promise<unknown>,
 ): Promise<T> {
   const endpoint = validateEndpoint(row.endpoint_url!, policy);
   const credential = await store.secret(row);
@@ -74,17 +75,21 @@ export async function customOperation<T>(
     if (credential?.accessToken) {
       headers.set("Authorization", `Bearer ${credential.accessToken}`);
     }
+    const requestBody = request.method !== "GET" && request.method !== "HEAD"
+      ? await request.arrayBuffer()
+      : undefined;
     const current = await store.get(row.user_id, row.id);
     if (
       current.revision !== row.revision || current.ciphertext !== row.ciphertext
     ) {
       throw new ApiError("The connection changed. Load it again.", 409);
     }
+    await authorize?.();
     const response = await fetcher(request.url, {
       method: request.method,
       headers,
       ...(request.method !== "GET" && request.method !== "HEAD"
-        ? { body: await request.arrayBuffer() }
+        ? { body: requestBody }
         : {}),
       signal: AbortSignal.any([deadline, request.signal]),
       redirect: "error",

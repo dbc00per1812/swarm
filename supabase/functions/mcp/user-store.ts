@@ -93,6 +93,29 @@ export class UserStore {
     if (rows.length !== 1) throw notFound();
     return rows[0];
   }
+  async accessible(user: string, id?: string) {
+    return z.array(connectionSchema).parse(
+      await this.request("rpc/swarm_team_connections", {
+        method: "POST",
+        body: JSON.stringify({
+          p_user_id: z.uuid().parse(user),
+          p_connection_id: id ? z.uuid().parse(id) : null,
+        }),
+      }),
+    );
+  }
+  async permitted(user: string, row: Connection, toolId: string) {
+    const [current] = await this.accessible(user, row.id);
+    if (
+      !current || current.revision !== row.revision ||
+      current.ciphertext !== row.ciphertext ||
+      !current.enabled_tools.includes(toolId) ||
+      !current.tool_catalog.some((tool) => tool.id === toolId)
+    ) {
+      throw new ApiError("This tool or connection is unavailable.", 403);
+    }
+    return current;
+  }
   async create(user: string, values: Partial<Connection>) {
     z.uuid().parse(user);
     const rows = z.array(connectionSchema).parse(
@@ -179,6 +202,7 @@ export class UserStore {
     row: Connection,
     value: z.infer<typeof credentialSchema>,
     label: string | null,
+    refresh = false,
   ) {
     const ciphertext = await this.encrypt(row.user_id, row.id, value);
     const saved = await this.request("rpc/swarm_user_save_credential", {
@@ -190,6 +214,7 @@ export class UserStore {
         p_ciphertext: ciphertext,
         p_account_label: label,
         p_previous_ciphertext: row.ciphertext,
+        p_refresh: refresh,
       }),
     });
     if (saved !== true) {

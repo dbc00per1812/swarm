@@ -192,7 +192,10 @@ export function createBetaGateway(
       throw new ApiError("Use a JSON request within 32 KiB.");
     }
   }
-  async function nativeRuntime(row: Connection): Promise<AppConfig> {
+  async function nativeRuntime(
+    row: Connection,
+    authorize: () => Promise<unknown>,
+  ): Promise<AppConfig> {
     const effective: AppConfig = {};
     let credential = await store.secret(row);
     const provider = row.provider!;
@@ -201,7 +204,11 @@ export function createBetaGateway(
       if (!credential.refreshToken) {
         throw new ApiError("Reconnect the expired account.");
       }
-      const refreshed = await oauth.exchange(provider, {
+      const refreshOAuth = providerOAuth(config, async (url, init) => {
+        await authorize();
+        return await fetcher(url, init);
+      });
+      const refreshed = await refreshOAuth.exchange(provider, {
         grant_type: "refresh_token",
         refresh_token: credential.refreshToken,
       });
@@ -213,6 +220,7 @@ export function createBetaGateway(
         row,
         credential,
         row.account_label,
+        true,
       );
       row.revision++;
     }
@@ -245,7 +253,7 @@ export function createBetaGateway(
     rate(`mcp:${user}`, 120);
     if (request.method !== "POST") return reply({ error: "Use POST." }, 405);
     const body = await input(request);
-    const rows = await store.list(user);
+    const rows = await store.accessible(user);
     let selected: Connection | undefined;
     let effective: AppConfig = {};
     const name = body?.method === "tools/call" ? body.params?.name : undefined;
@@ -255,7 +263,8 @@ export function createBetaGateway(
     ) {
       const matches = rows.filter((row) =>
         row.kind === "native" && row.ciphertext && row.provider &&
-        nativeIds[row.provider] === name && row.enabled_tools.includes(name)
+        nativeIds[row.provider] === name && row.enabled_tools.includes(name) &&
+        row.tool_catalog.some((tool) => tool.id === name)
       );
       const id = body.params?.arguments?.connection_id;
       selected = id
@@ -271,7 +280,11 @@ export function createBetaGateway(
             : "This tool or connection is unavailable.",
         );
       }
-      effective = await nativeRuntime(selected);
+      const row = selected;
+      effective = await nativeRuntime(
+        row,
+        () => store.permitted(user, row, name),
+      );
     }
     const enabled = rows.filter((row) =>
       row.kind === "native" && row.ciphertext
@@ -306,7 +319,7 @@ export function createBetaGateway(
               annotations: tool.annotations,
             }, async (args) => {
               try {
-                const current = await store.get(user, row.id);
+                const current = await store.permitted(user, row, tool.id);
                 if (
                   !current.enabled_tools.includes(tool.id) ||
                   current.revision !== row.revision
@@ -343,6 +356,7 @@ export function createBetaGateway(
                     }, { timeout: 10_000 });
                   },
                   fetcher,
+                  () => store.permitted(user, current, tool.id),
                 );
               } catch {
                 return {
@@ -360,12 +374,7 @@ export function createBetaGateway(
       },
     }, async (url, init) => {
       if (selected) {
-        const current = await store.get(user, selected.id);
-        if (
-          !current.enabled_tools.includes(name) || !current.ciphertext ||
-          current.revision !== selected.revision ||
-          current.ciphertext !== selected.ciphertext
-        ) throw new ApiError("The tool is disabled.");
+        await store.permitted(user, selected, name);
       }
       return await fetcher(url, init);
     });
