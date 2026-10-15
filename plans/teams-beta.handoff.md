@@ -1,6 +1,18 @@
 # Lightweight teams handoff
 
-## Current state
+## Release state
+
+Connections and teams are merged into `main` and deployed. The production MCP
+gateway is version 15. GitHub Pages serves commit
+`d0c0179fce986c9cb28c80b477161c0d5612cc6c`. Both team migrations are installed
+and registered. Pull requests 4 and 5 are merged.
+
+The release used direct user authorization. No separate named approval is
+claimed. See `plans/teams-beta.release.md` for live evidence and remaining
+limits. The earlier draft and deployment statements below describe
+implementation history.
+
+## Implementation history
 
 The user authorized implementation after the Connections technical release
 review. The user requested a new chat after each increment and automatic
@@ -244,23 +256,24 @@ verification files were removed. No persistent test accounts or team records
 were created. The existing Muse connection and Claude configuration remain
 unchanged.
 
-## Remaining release gate
+## Release checks and remaining limits
 
-All three accepted increments are implemented. No further implementation
-increment or new chat is required. Keep pull requests 4 and 5 as drafts. Named
-review and release authorization remain required before merge, migration
-installation, deployment, or publication. Do not infer another person's
-approval.
+Actual hosted two-user website and shared MCP checks pass. They include
+invitation acceptance, selected tool execution, withdrawal, member removal,
+connection-owner departure, privacy, invitation revocation, key revocation, and
+organization deletion. Desktop and mobile layouts pass. All 115 database
+assertions pass against the installed migrations within rollback transactions.
 
-No team migration, gateway, or website deployment occurred. Production remains
-on the reviewed Connections release. Actual hosted two-user website and shared
-MCP verification remains unavailable without persistent team migrations and a
-changed gateway. The local browser checks use synthetic API responses. Gateway
-tests use the actual handler with synthetic remote boundaries. Database tests
-use rollback transactions, without simultaneous sessions.
+Both disposable accounts and their related records were removed. Identifier-only
+audit events remain under the existing retention policy. Production retains four
+personal connections, two active personal keys, and no pending authorizations.
+No team organizations, memberships, invitations, or grants remain after cleanup.
 
-When release authorization exists, install both team migrations in order before
-deploying the changed gateway. Complete actual hosted two-user flows, remove
-disposable fixtures, and repeat the original service baseline. Do not reset the
-database. The credential-output incident remains open because rotation is
-unverified.
+The original agent setup and all four original service reads pass after cleanup.
+The existing Muse connection and Claude configuration remain unchanged.
+Temporary private verification files were removed. No database reset occurred.
+
+The credential-output incident remains open because rotation is unverified.
+Database tests do not use simultaneous sessions. Screen reader testing and
+additional provider workspace installations remain unperformed. See the release
+report for the complete limits. No implementation increment remains.

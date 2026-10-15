@@ -1,6 +1,16 @@
 # Connections beta handoff
 
-## Current increment
+## Release state
+
+Pull request 4 is merged into `main`. The combined Connections and team release
+is deployed. The production gateway is version 15. The original agent and all
+four original service reads pass after release cleanup.
+
+See `plans/teams-beta.release.md` for current deployment evidence and limits.
+The earlier draft and deployment statements below describe implementation
+history. Credential rotation remains unverified.
+
+## Implementation history
 
 All three increments are implemented. The final technical release review is
 complete, including the OAuth account-linking correction. All 40 gateway tests
