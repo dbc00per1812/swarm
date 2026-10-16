@@ -69,9 +69,14 @@ connection and key deletion. The migration remains absent from production.
 
 The policy candidate is `docs/integrations/gmail-privacy-draft.md`. It covers
 account data, browser storage, native and custom tools, Gmail approval, sharing,
-retention, deletion limits, and proposed Limited Use commitments. It is not
+retention, deletion limits, and selected Limited Use commitments. It is not
 published or effective. The confirmed public operator name is Darragh Buckley
 1812. The approved support and privacy contact is recorded in the candidate.
+
+The candidate now selects data-use restrictions, human-access rules, deletion
+handling, and operator duties. No further wording approval is needed for those
+rules. Supporting procedures, retention facts, recipient controls, and matching
+production behavior still require verification before publication.
 
 The concrete Google fields, scope justification, demonstration requirements, and
 deployment order are in `docs/integrations/gmail-google-submission.md`. Service
@@ -132,7 +137,7 @@ not been verified.
 
 ## Remaining release conditions
 
-- Confirm the Limited Use operating commitments.
+- Verify that operations support the selected Limited Use commitments.
 - Establish supported recipient practices and historical-data deletion
   procedures.
 - Resolve the open credential incident without losing existing service access.

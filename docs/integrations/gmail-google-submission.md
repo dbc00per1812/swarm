@@ -72,10 +72,11 @@ legacy storage, browser state, agent transfers, team access, approval records,
 and known deletion limits. The confirmed public operator name is Darragh Buckley
 1812. The support and privacy address is approved.
 
-Before publication, confirm the proposed Limited Use commitments and recipient
-controls. Do not replace that confirmation with a statement that encryption
-establishes compliance. Do not promise that connection removal erases all copies
-or revokes Google's grant.
+The candidate records selected Limited Use rules and operator duties. No further
+wording approval is needed for those rules. Before publication, verify the
+supporting procedures, retention facts, recipient controls, and deployed
+behavior. Encryption alone does not establish compliance. Do not promise that
+connection removal erases all copies or revokes Google's grant.
 
 ## Demonstration record
 
@@ -100,7 +101,7 @@ Google requires an end-to-end demonstration. See its
 
 ## Review and deployment order
 
-1. Confirm the policy commitments.
+1. Verify that operations support the selected policy commitments.
 2. Resolve recipient controls, retention procedures, and the open credential
    incident.
 3. Approve the reviewed source and deployment target.

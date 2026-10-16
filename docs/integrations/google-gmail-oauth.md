@@ -253,8 +253,9 @@ does not establish a recipient's retention, human-access, or training rules.
 | Scope justification | Prepared text above                                                                     |
 | Demonstration URL   | Pending final branding, policy, consent behavior, and synthetic mailbox                 |
 
-The operator must approve any Limited Use statement as an operational
-commitment. Google requires an affirmative statement. See the
+The privacy candidate records selected Limited Use operating rules. Wording
+approval is complete; supporting procedures and recipient controls require
+verification. Google requires an affirmative statement. See the
 [user-data policy](https://developers.google.com/terms/api-services-user-data-policy).
 Do not publish claims about advertising, training, human access, or retention
 without confirming actual operations and recipient controls.
@@ -300,10 +301,11 @@ provider write deduplication do not apply. The API path uses Gmail v1. No
 separate deprecation-header monitor is configured. The callback uses HTTP 303.
 Browser messaging uses exact origins.
 
-UNKNOWN-BLOCKING: confirm responsibility for Google notices, policy changes,
-incidents, and credential rotation. Before public release, assign monthly policy
-review and verification-expiry reminders to that operator. No recurring
-automation was created. This task did not authorize a schedule.
+The public operator is responsible for Google notices, policy changes,
+incidents, and credential rotation. UNKNOWN-BLOCKING: verify the procedures for
+these duties. Before public release, establish policy review and
+verification-expiry procedures. No recurring automation was created. This task
+did not authorize a schedule.
 
 Monitor Gmail error rates, request latency, and quota usage separately without
 recording queries or returned headers. Rotation remains an operator procedure;
@@ -325,7 +327,8 @@ still require confirmation.
 - Infrastructure logs, backup retention, and complete deletion process.
 - Permitted recipient data handling. Swarm confirmation no longer depends on
   choosing a particular client.
-- Human access rules and confirmation of Limited Use operating commitments.
+- Evidence that human access and recipient controls follow the selected Limited
+  Use operating rules.
 - Whether Gmail tool sharing with organizations remains part of the public
   product.
 

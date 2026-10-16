@@ -1,9 +1,10 @@
 # Swarm privacy policy candidate
 
-Review date: 2026-10-15, America/Chicago. Status: prepared for operator review.
-This candidate is not published or effective. It describes the proposed release,
-including the local Gmail approval changes. Production still uses gateway
-version 15 without those changes.
+Review date: 2026-10-16, America/Chicago. Status: operating rules selected;
+supporting procedures and controls remain unverified. This candidate is not
+published or effective. It describes the proposed release, including the local
+Gmail approval changes. At the last production inspection, gateway version 15
+did not include those changes.
 
 ## Publication conditions
 
@@ -11,13 +12,41 @@ The confirmed public operator name is Darragh Buckley 1812. The approved public
 support and privacy address is `darragh.buckley1812@gmail.com`. These
 confirmations do not establish a registered business or legal entity.
 
-Confirm the operational commitments in the Limited Use section. Confirm hosting
-log retention, historical backup handling, access procedures, and legacy-copy
-deletion. A source audit cannot establish those operational facts. Review the
-policy against the operator's actual legal obligations before publication.
+The operating rules below define the proposed public release. Verify hosting log
+retention, historical backup handling, access procedures, and legacy-copy
+deletion before publication. A source audit cannot establish those operational
+facts. Review the policy against the operator's actual legal obligations before
+publication.
 
 The text below avoids claims of complete deletion, certified security,
 third-party agent compliance, or a fixed support response time.
+
+## Selected operating rules
+
+- Use Google data only for the disclosed mailbox search feature.
+- Do not sell Google data or use it for advertising, credit decisions, or
+  general model training.
+- Restrict transfers and human access to the Limited Use exceptions below.
+- Require the same restrictions for staff, contractors, and supported agent
+  recipients.
+- Verify account control before deletion that affects access.
+- Handle deletion requests through the public support and privacy address.
+- Check active records, historical credential copies, exports, and known backups
+  when handling a deletion request.
+- Record deletion results and any retained copies with their retention reason.
+- Do not promise immediate or complete deletion without evidence.
+
+The public operator is responsible for privacy requests, Google notices, policy
+review, security incidents, and credential rotation. These are operating duties
+for the proposed release. Their assignment does not prove that the procedures
+exist or that an incident is resolved. No recurring automation is configured by
+this document change.
+
+Before publication, verify the deletion procedure and access controls. Establish
+the retention facts for historical copies and hosting logs. Verify recipient
+practices before permitting public Gmail transfers. Match the policy to the
+deployed application, including search approval. Wording decisions require no
+further confirmation; missing evidence remains a publication condition.
 
 ## Candidate policy text
 
@@ -161,11 +190,11 @@ source finding does not describe hosting logs, operator access, or agent
 provider practices. The operator must confirm those practices before
 publication.
 
-### Limited Use statement proposed for approval
+### Limited Use commitment for the proposed release
 
-The following text is an operational commitment for the proposed public release.
-It must not be published as a statement of current compliance without approval
-and supporting controls.
+The following text states the selected operating commitment for the proposed
+public release. It must not be published as a statement of current compliance
+without supporting procedures and controls.
 
 Swarm's use and transfer of information received from Google APIs will adhere to
 the
