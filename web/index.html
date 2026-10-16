@@ -46,6 +46,16 @@
           class="section-heading"><h2 id="connections-title">Your connections</h2><button id="signout" class="quiet" type="button">Sign out</button></div>
         <p id="empty" class="muted"
           hidden>Add an account or a custom MCP server to get started.</p>
+        <section class="service" aria-labelledby="gmail-data-title">
+          <h2 id="gmail-data-title">Before you connect Gmail</h2>
+          <p
+            class="muted">Swarm searches Gmail on its server. It returns message IDs and the Subject, From, and Date headers to agents with your key.</p>
+          <p
+            class="muted">If you share the Gmail tool, organization members' agents can also search your mailbox. Swarm stores encrypted credentials and your Gmail address.</p>
+          <p
+            class="muted">Google grants read access to messages and settings. The current tool does not fetch message bodies or attachments.</p>
+          <p><a href="gmail-data.html">Read about Gmail data use and access removal</a></p>
+        </section>
         <div id="services"></div>
         <section class="service" aria-labelledby="custom-title">
           <h3 id="custom-title">Add a custom MCP server</h3>
@@ -89,6 +99,9 @@
       </section>
       <noscript>Enable JavaScript to use Swarm Connections.</noscript>
     </main>
-    <footer>Your service credentials stay on the Swarm server. Agents receive tool results.</footer>
+    <footer>
+      <p>Your service credentials stay on the Swarm server. Agents receive tool results.</p>
+      <a href="gmail-data.html">Gmail data use and access removal</a>
+    </footer>
   </body>
 </html>

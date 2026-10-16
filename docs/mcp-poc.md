@@ -16,10 +16,11 @@ npm ci
 npm test
 ```
 
-Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`, `dist/app.js`,
-and `dist/callback.js` from `web/`. Keep the `dist/` directory in the published
-output. The build bundles the pinned Supabase browser client. Generated files
-stay outside the source branch. GitHub Pages serves the `gh-pages` branch.
+Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`,
+`gmail-data.html`, `dist/app.js`, and `dist/callback.js` from `web/`. Keep the
+`dist/` directory in the published output. The build bundles the pinned Supabase
+browser client. Generated files stay outside the source branch. GitHub Pages
+serves the `gh-pages` branch.
 
 Set `SWARM_UI_URL`, the Supabase Auth site URL, and its redirect allowlist to
 the website URL. Configure GitHub in Supabase Auth for account creation and
@@ -58,6 +59,11 @@ installation in another workspace.
 
 Google test authorizations can expire after seven days. Gmail is not verified
 for general distribution. Existing personal connections remain available.
+
+The website includes a Gmail data-use notice and access-removal instructions.
+This technical notice does not replace the operator's complete privacy policy.
+See `docs/integrations/google-gmail-oauth.md` for public verification
+requirements.
 
 ## Custom MCP servers
 

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'none'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+    <title>Gmail data use — Swarm</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <header><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> SWARM</a><span class="tag">CONNECTIONS BETA</span></header>
+    <main id="main">
+      <p class="eyebrow">GMAIL CONNECTIONS</p>
+      <h1>Gmail data use</h1>
+      <p
+        class="intro">This page describes the current Gmail tool and access controls. It is a technical notice, not a complete privacy policy.</p>
+      <section aria-labelledby="availability-title">
+        <h2 id="availability-title">Current availability</h2>
+        <p>Gmail connections use a Google testing application. Only approved Google test users can connect.</p>
+        <p>Test authorizations and refresh tokens expire after seven days. Public Gmail access requires further Google verification.</p>
+      </section>
+      <section aria-labelledby="access-title">
+        <h2 id="access-title">What Swarm accesses</h2>
+        <p>Google grants Swarm permission to view Gmail messages and settings. Swarm uses this permission to search your mailbox.</p>
+        <p>The current tool returns message IDs, thread IDs, and the Subject, From, and Date headers. It does not fetch message bodies or attachments.</p>
+        <p>Swarm sends your search query to Google. The server also reads your Gmail address to identify the connected account.</p>
+      </section>
+      <section aria-labelledby="storage-title">
+        <h2 id="storage-title">What Swarm stores</h2>
+        <p>Swarm stores the connection name, Gmail address, settings, and tool permissions in its Supabase database.</p>
+        <p>The server encrypts saved access and refresh tokens. A refresh token lets the server obtain access after the current access token expires.</p>
+        <p>The Gmail tool processes search results for each request. Its application code does not save message headers or search results in the database.</p>
+        <p>This statement does not describe infrastructure logs, backups, or the storage practices of your agent provider.</p>
+      </section>
+      <section aria-labelledby="sharing-title">
+        <h2 id="sharing-title">Who can receive results</h2>
+        <p>Agents with your Swarm key can use your enabled Gmail tool. Swarm sends the results through its server to the requesting agent.</p>
+        <p>If you share the Gmail tool with an organization, members' agents can search the connected mailbox. Sharing applies to the tool, not selected messages.</p>
+        <p>Sharing does not expose your saved Google credentials to organization members. Your agent provider can store results under its own terms.</p>
+        <p>Use an agent only if its handling of Gmail data meets your requirements and Google's applicable data-use rules.</p>
+      </section>
+      <section aria-labelledby="removal-title">
+        <h2 id="removal-title">How to stop access</h2>
+        <ol>
+          <li>To stop tool access, clear the Gmail tool selection and select Save tools.</li>
+          <li>To stop organization access, withdraw the Gmail tool share.</li>
+          <li>To remove the active saved connection, select Remove on its account card.</li>
+          <li>To revoke Google's authorization, remove the Swarm application from your <a href="https://myaccount.google.com/connections">Google Account connections</a>.</li>
+          <li>To stop an agent key, select Revoke key in Swarm.</li>
+        </ol>
+        <p>Removing a Swarm connection deletes its active connection row, saved credentials, pending authorization, and organization shares.</p>
+        <p>Removal does not revoke Google's grant or erase results already received by agents. Backups and earlier imported credential copies need separate operator handling.</p>
+      </section>
+      <p><a href="./">Return to Swarm</a></p>
+    </main>
+    <footer>Gmail data-use notice. Technical review date: 2026-10-15.</footer>
+  </body>
+</html>
