@@ -1,88 +1,149 @@
 # Gmail public access preparation
 
-Date: 2026-10-15, America/Chicago. Status: prepared for review; public Gmail
-access remains blocked.
+Date: 2026-10-15, America/Chicago. Status: local implementation and submission
+material are prepared for review. Public Gmail access remains blocked.
 
-## Completed work
+## Google configuration
 
-The Google Cloud console identifies the correct project as `swarm-mcp`. Its
-project number matches the Gmail client configured for Swarm. The existing
-`gmail.readonly` scope is now declared and saved in Data Access. The application
-remains External and Testing. No OAuth verification was submitted. The working
-callback, credentials, connections, and keys retain their existing
-configuration.
+The correct project is `swarm-mcp`, number `441732284617`. Its client ID prefix
+matches the configured Gmail client. The sole Data Access scope is the saved
+`gmail.readonly` permission. Audience remains External and Testing. The console
+shows one test user and no other users.
 
-The source adds a Gmail data-use page and links it from the homepage. A notice
-explains Gmail access before the connection cards. It describes server access,
-agent transfers, team sharing, and separate Google revocation. The page states
-that it is a technical notice. It makes no complete privacy-policy or compliance
-claim.
+A fresh authenticated console tab confirms the saved homepage
+`https://dbc00per1812.github.io/swarm/`. Authorized domains include
+`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. Privacy and
+terms links are empty. The app name remains `Swarm MCP personal preview`.
 
-The verification package is in `docs/integrations/google-gmail-oauth.md`. The
-incomplete policy draft is in `docs/integrations/gmail-privacy-draft.md`. Both
-documents mark missing facts and public release conditions. The source remains
-separate from the deployed website until release authorization.
+Publish app is disabled. The console requires completed branding configuration.
+Verification Center offers no submission in the current Testing state. This
+continuation changed no Google settings or audience access.
 
-Search Console issued an HTML challenge for the existing GitHub Pages URL. The
-unchanged downloaded file is prepared at `web/googledfccf295f08c8741.html`. It
-is published in `gh-pages` commit `2777c372eac7d315465e0680808efe9b90626e2d`.
-The Pages deployment completed successfully. Its only added file is the approved
-verification asset. The public file matches the original download exactly.
+Search Console previously displayed Ownership verified for the GitHub Pages URL
+prefix. The exact 53-byte verification asset remains public and unchanged. This
+result does not establish OAuth acceptance of either hosted domain.
 
-Search Console displayed “Ownership verified” through the HTML file method. This
-free URL-prefix method does not establish OAuth acceptance of hosted domains.
+The verification file is `web/googledfccf295f08c8741.html`. Its SHA-256 is
+`ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`. Both local
+and public copies still match this hash and each other. The earlier Pages
+deployment used `gh-pages` commit `2777c372eac7d315465e0680808efe9b90626e2d`.
+Every future website deployment must preserve these bytes.
 
-The branding form was set to the Swarm homepage and additional GitHub Pages
-domain. The Save result remains unconfirmed. The Google page remained blank
-after reload. Recheck persisted branding values before continuing. No privacy or
-terms URL was entered.
+## Local implementation
 
-A follow-up Management API check returned zero listed backups and disabled
-point-in-time recovery. The physical-backup metadata object was empty.
-Historical retention and infrastructure-log retention remain unverified. The
-branding page still returned no application content during the follow-up browser
-check.
+Implementation commit: `8464df2`. The branch retains the four earlier
+preparation commits.
 
-The verification file's SHA-256 is
-`ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`.
+The homepage now describes Swarm before sign-in. A separate Gmail disclosure
+dialog precedes Google authorization. Cancel and Escape stop the flow and
+restore focus. The technical data-use page describes the local release
+candidate.
+
+Each Gmail search now requires approval on the signed-in Swarm website. The
+review shows the mailbox, query, result limit, and requesting key fingerprint. A
+fingerprint identifies the key without disclosing it. The user must confirm
+permitted agent data use before approval. Denial requires no checkbox.
+
+Approval binds the requesting user, connection revision, query, limit, and agent
+key. It permits one attempt within ten minutes. The database consumes it
+atomically. An agent key cannot approve a request. The gateway contacts no Gmail
+search or token-refresh endpoint before approval.
+
+Disabled tools, revoked keys, changed connections, expired or used approvals,
+and withdrawn team access fail closed. Current permissions are checked again
+before each Gmail message request. Existing keys retain their identities. After
+deployment, their Gmail searches will require this additional approval.
+
+Pending query data uses the existing AES-GCM protection with a separate approval
+context. Use or denial clears its ciphertext. During later approval activity,
+cleanup clears expired records that are available. Locked records can require
+later activity. Inactivity can leave expired ciphertext in storage. Approval
+identifiers, hashes, and decision times have no automatic expiry. Connection
+removal deletes its approval records.
+
+The additive migration is `20261016020000_gmail_approvals.sql`. It enables row
+security and restricts access to the server role. It includes indexes for
+connection and key deletion. The migration remains absent from production.
+
+## Policy and submission material
+
+The policy candidate is `docs/integrations/gmail-privacy-draft.md`. It covers
+account data, browser storage, native and custom tools, Gmail approval, sharing,
+retention, deletion limits, and proposed Limited Use commitments. It is not
+published or effective. The public operator identity remains unconfirmed. The
+approved support and privacy contact is recorded in the candidate.
+
+The concrete Google fields, scope justification, demonstration requirements, and
+deployment order are in `docs/integrations/gmail-google-submission.md`. Service
+terms remain optional. This preparation creates no legal agreement.
+
+The integration audit is `docs/integrations/google-gmail-oauth.md`. Its research
+notebook now contains eighteen official sources. Client research showed that
+confirmation capabilities depend on client configuration. Swarm's new server
+check therefore does not rely on a client claiming approval. Recipient data-use
+controls still require evidence before public release.
 
 ## Verification
 
-- `npm test`: 32 passing browser module tests; both bundles build.
-- Source review: no findings in the technical-notice change.
-- Document review: no findings in the verification package or policy draft.
-- Browser review: homepage link, public notice, return link, skip link, keyboard
-  focus, and Enter navigation pass.
-- The notice has no horizontal overflow at 1280 and 320 pixels.
-- The local homepage cannot reach the production configuration through its
-  restricted browser origin.
-- Authenticated notice rendering remains unverified in a browser. The existing
-  module tests still pass.
-- The console confirmed “Data access changes saved!” with one restricted Gmail
-  scope.
-- Private screenshots remain outside the public repository.
-- Existing GitHub, Slack, Linear, and Gmail reads all pass after the declaration
-  change.
+- Browser module suite: 38 passing tests; both bundles build.
+- Deno gateway and service suites: 69 passing tests; TypeScript checking passes.
+- Database suite: all migrations and behavioral SQL checks pass in isolated
+  PostgreSQL.
+- Test target guard: a database host override is rejected before connection.
+- Native PostgreSQL 18.4: independent sessions verify one-use consumption,
+  connection-removal contention, deferred cleanup, and the pending-request cap.
+- The contention tests observe an actual lock wait before releasing the first
+  transaction.
+- A temporary cleanup-order mutation reproduced deadlock error `40P01`.
+- The corrected migration rejects concurrent removal with `23503` and no
+  deadlock.
+- Browser walkthrough: synthetic sign-in, exact search review, unchecked
+  approval refusal, affirmative approval, denial, and reconnect disclosure pass.
+- Browser accessibility checks: Cancel, Escape, focus restoration, keyboard
+  operation, and 320-pixel pending, approved, denied, and dialog layouts pass.
+- Independent reviews corrected navigation, foreign-key indexes, lock ordering,
+  test target validation, and the human-access policy exception.
 
-Read-only production checks found five connections, two active keys, and two
-pending authorizations. The team tables contain no organizations, memberships,
-invitations, or grants. These counts differ from the earlier release baseline.
-This preparation made no Supabase database writes. It did not remove the
-additional records.
+The browser walkthrough used the actual built interface with a temporary
+synthetic backend. It made no Google calls. It does not prove production OAuth,
+final Gmail result retrieval, or Google policy acceptance. The native database
+is a disposable local PostgreSQL instance. It does not change production.
 
-## Remaining public release conditions
+## Production audit
 
-- Confirm the public operator, contacts, and an accepted site-ownership
-  verification method.
-- Confirm logs, backup retention, deletion, and legacy credential handling.
-- Complete the privacy policy and applicable operator terms.
-- Demonstrate permitted agent data use and granular confirmation of Gmail agent
-  actions.
-- Verify the homepage and callback-domain requirements with Google.
-- Produce a demonstration with final branding and synthetic mail.
-- Complete restricted-scope verification and the required security assessment.
+Read-only checks found five connections, two active keys, two pending OAuth
+states, and four retained legacy credential rows. Organizations, memberships,
+and shares remain empty. This continuation made no production database writes.
+It did not remove unexplained records or rotate working credentials.
+
+The project remains `ACTIVE_HEALTHY` in `us-east-1`. The organization plan is
+Free. Supabase's published plan lists one day for API/database logs and one hour
+for Auth audit logs. These published limits do not prove deletion of every
+operational copy or historical export.
+
+Database statement logging is `ddl`; error-statement logging is `error`. Audit
+parameter logging is off. No `pg_cron` extension is installed. These settings do
+not describe every platform log.
+
+The backup API lists no available backups. Point-in-time recovery is disabled,
+and physical-backup metadata is empty. Historical backup retention remains
+unestablished. The earlier credential-output incident remains open; rotation has
+not been verified.
+
+## Remaining release conditions
+
+- Confirm the public operator identity and Limited Use operating commitments.
+- Establish supported recipient practices and historical-data deletion
+  procedures.
+- Resolve the open credential incident without losing existing service access.
+- Approve and publish the reviewed implementation and final privacy policy.
+- Confirm Google's acceptance of hosted-domain ownership evidence.
+- Configure separate test and production environments for final verification.
+- Capture the real OAuth and Gmail demonstration with synthetic mail.
+- Complete Google's restricted-scope review and required security assessment.
 - Verify a new public Google account through the final production flow.
 
-No purchase, assessor engagement, or paid assessment is authorized. The existing
-credential-output incident remains open; rotation is unverified. Existing
-personal service access, Muse, and Claude remain unchanged.
+No purchase, paid assessment, or assessor contract is authorized. The source
+branch remains local. No merge, website publication, gateway deployment,
+verification submission, or public-access expansion occurred in this
+continuation.

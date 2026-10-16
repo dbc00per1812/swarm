@@ -3,9 +3,14 @@
 Research date: 2026-10-15, America/Chicago. Status: preparation only. Public
 Gmail access is not enabled or verified.
 
-Notebook: `f01-int/Google-Gmail/public-oauth`. The notebook contains eleven
-official sources. All eleven additions succeeded. The query used the sources and
+Notebook: `f01-int/Google-Gmail/public-oauth`. The notebook contains eighteen
+official sources. The original eleven additions succeeded. Seven client and
+hosting references were added successfully during the continuation. Queries
 returned citations. The API reference corrected an initial scope recommendation.
+
+Source descriptions below include the local approval implementation. Production
+still uses gateway version 15. The approval migration and interface are not
+published.
 
 ## Current Google configuration
 
@@ -31,11 +36,15 @@ displayed “Data access changes saved!” after Save. This declaration does not
 change requested permissions or approve the scope. The application remains in
 Testing.
 
-After site verification, the branding form was set to the existing Swarm
-homepage and the additional domain `dbc00per1812.github.io`. Save did not return
-a confirmed result. The page remained blank after reload. Recheck the saved
-branding values before further setup. The existing Supabase callback domain was
-not removed. No privacy or terms URL was entered.
+A fresh authenticated console tab now confirms the saved branding values. The
+homepage is `https://dbc00per1812.github.io/swarm/`. Authorized domains include
+`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. Privacy and
+terms links remain empty. The app name remains `Swarm MCP personal preview`.
+
+Audience still shows External and Testing, with one test user and no other
+users. Publish app is disabled. The console requires completed branding
+configuration. Verification Center offers no submission while this state
+remains. This continuation changed no Google settings.
 
 ## Integration contract
 
@@ -81,25 +90,32 @@ Swarm callback → initiating browser → authenticated completion
                                               v
                                   encrypted credential database
 
-Agent key → Swarm permission check → Google message search
-                                          │
-                                          v
-                        IDs and Subject/From/Date headers
-                                          │
-                                          v
-                            requesting agent or team agent
+Agent key → pending request → signed-in website review
+                                     │ approve or deny
+                                     v
+Same key + exact request + approval ID → atomic one-use check
+                                                  │
+                                                  v
+                         Swarm permission check → Google search
+                                                  │
+                                                  v
+                               IDs and Subject/From/Date headers
+                                                  │
+                                                  v
+                                   requesting agent or team agent
 ```
 
-| Data                            | Handling in the current source                                                                                        |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Gmail access and refresh tokens | AES-GCM ciphertext in the user connection; user and connection IDs bind encryption                                    |
-| Gmail address                   | Unencrypted account label in the connection row; returned to its owner                                                |
-| Search query                    | Sent to Google in the message-list request URL                                                                        |
-| Search result                   | Processed in server memory and returned to the requesting MCP client                                                  |
-| Message bodies and attachments  | Not requested by the current Gmail tool                                                                               |
-| Connection metadata             | Name, owner ID, provider, settings, tool catalog, enabled tools, revision                                             |
-| Team audit                      | Actor, organization, target IDs, action, and time; no automatic expiry                                                |
-| Browser state                   | Supabase session, key IDs, invitation state, and temporary OAuth proof; raw agent keys are not saved in local storage |
+| Data                            | Handling in the current source                                                                               |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Gmail access and refresh tokens | AES-GCM ciphertext in the user connection; user and connection IDs bind encryption                           |
+| Gmail address                   | Unencrypted account label in the connection row; returned to its owner                                       |
+| Search query                    | Encrypted in a pending approval; sent to Google only after approval in the message-list request URL          |
+| Search result                   | Processed in server memory and returned to the requesting MCP client                                         |
+| Message bodies and attachments  | Not requested by the current Gmail tool                                                                      |
+| Connection metadata             | Name, owner ID, provider, settings, tool catalog, enabled tools, revision                                    |
+| Team audit                      | Actor, organization, target IDs, action, and time; no automatic expiry                                       |
+| Browser state                   | Supabase session, key IDs, invitation state, OAuth proof, and pending approval ID; no Gmail query or results |
+| Approval records                | User, connection, key/request hashes, encrypted query/limit, revision, expiry, and decision times            |
 
 Evidence: `services.ts`, `provider-oauth.ts`, `user-store.ts`,
 `beta-gateway.ts`, `web/app.js`, and the installed migrations. These files are
@@ -107,11 +123,11 @@ under `supabase/functions/mcp/`, except where specified. The Gmail tool has no
 database write for headers or results. This does not establish
 infrastructure-log, backup, or recipient retention behavior.
 
-Removal deletes the active connection and cascades to pending OAuth states and
-team shares. It does not revoke Google's grant. The website now explains
-separate Google revocation. Legacy import retains earlier credential ciphertext.
-It has a separate import marker. Do not delete legacy credentials or existing
-keys during this preparation.
+Removal deletes the active connection and cascades to pending OAuth states,
+Gmail approval records, and team shares. It does not revoke Google's grant. The
+website now explains separate Google revocation. Legacy import retains earlier
+credential ciphertext. It has a separate import marker. Do not delete legacy
+credentials or existing keys during this preparation.
 
 Do not promise complete erasure until the operator defines backup and legacy
 handling.
@@ -122,6 +138,24 @@ The Management API reports database region `us-east-1` and project status
 A follow-up backup query returned zero listed backups and `pitr_enabled: false`.
 The physical-backup metadata object was empty. This snapshot does not establish
 historical backup retention or infrastructure-log retention.
+
+The read-only continuation found four retained legacy credential rows. Database
+statement logging is `ddl`; error-statement logging is `error`. Audit parameter
+logging is off. These fields do not describe all platform logs or retention.
+Supabase documents that retention depends on the plan. See its
+[log documentation](https://supabase.com/docs/guides/observability/logs). The
+Management API confirms the project's organization plan is Free. Its
+[published plan](https://supabase.com/pricing) lists one day for API/database
+logs and one hour for Auth audit logs. These limits do not prove deletion of
+every operational copy or historical export. No `pg_cron` extension is
+installed. The approval table is absent in production.
+
+The local approval function clears encrypted query data after use or denial.
+Expired requests cannot execute. During approval activity, Swarm clears expired
+query data that is available for cleanup. Locked records can require later
+activity. Without activity, ciphertext can remain. Decision identifiers and
+hashes have no automatic expiry. Connection removal deletes its approval
+records. The policy candidate discloses these limits.
 
 ## Public release requirements
 
@@ -170,26 +204,54 @@ It requires prominent disclosure, affirmative consent, and granular confirmation
 of agentic invocation. It also limits transfers and prohibits general model
 training with Workspace data. See the
 [Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy).
-The current key authorizes enabled tools without a Swarm confirmation for each
-call. An agent client's confirmation behavior has not been verified.
+Production version 15 has no Swarm confirmation for each call. The local source
+now requires signed-in website approval before every Gmail search. Approval
+binds the user, mailbox, connection revision, exact query, result limit, and
+agent key. It permits one attempt within ten minutes. The database consumes
+approval atomically. Disabled tools, changed connections, revoked keys, expired
+requests, and withdrawn sharing deny access.
 
-UNKNOWN-BLOCKING: demonstrate a compliant client confirmation flow or implement
-the missing confirmation control before public release. The new notice alone
-does not resolve that requirement.
+A separate disclosure dialog precedes Google authorization. Cancel and Escape
+stop that flow. The website also explains Swarm publicly before sign-in.
+
+The control does not depend on a client claiming that the user approved. Browser
+tests, gateway tests, isolated PostgreSQL tests, and a synthetic browser walk
+passed. These results do not prove Google's acceptance or final production
+behavior. The implementation remains subject to review and release approval.
+Recipient data-use controls remain a public release condition.
+
+## Client confirmation investigation
+
+| Surface              | Documented capability                                                                            | Evidence limit                                                        |
+| -------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| OpenAI Responses MCP | `require_approval` can require approval; configuration can also bypass it                        | No existing Swarm client deployment was certified                     |
+| Claude Code          | `_meta["anthropic/requiresUserInteraction"]: true` requires a human prompt in supported versions | Vendor-specific metadata does not establish behavior in other clients |
+| MCP URL elicitation  | Optional client support can direct a user to a separate secure page                              | Support cannot be assumed for an arbitrary client                     |
+| Local Swarm change   | Server requires website approval regardless of client approval settings                          | Synthetic verification passed; production deployment remains pending  |
+
+Sources:
+[OpenAI MCP documentation](https://developers.openai.com/api/docs/guides/tools-connectors-mcp),
+[Claude Code MCP documentation](https://code.claude.com/docs/en/mcp), and
+[MCP elicitation specification](https://modelcontextprotocol.io/specification/2025-11-25/client/elicitation).
+
+This investigation avoids treating a client's generic read-only tool setting as
+evidence of fresh human confirmation. No Claude configuration was changed.
+Swarm's check solves the invocation-control gap in the local implementation. It
+does not establish a recipient's retention, human-access, or training rules.
 
 ## Reviewable consent configuration
 
-| Field               | Prepared value or required decision                                                      |
-| ------------------- | ---------------------------------------------------------------------------------------- |
-| App name            | Proposed: `Swarm`; confirm before saving                                                 |
-| Homepage            | Existing website: `https://dbc00per1812.github.io/swarm/`; final verified domain pending |
-| Privacy URL         | `<verified homepage base URL>privacy.html`; draft below is not published                 |
-| Terms URL           | `<verified homepage base URL>terms.html`; operator terms pending                         |
-| Data Access         | Only `https://www.googleapis.com/auth/gmail.readonly`                                    |
-| Support contact     | Public support address selected by the operator                                          |
-| Developer contacts  | Monitored project-owner contacts; keep private                                           |
-| Scope justification | Prepared text above                                                                      |
-| Demonstration URL   | Pending final branding, policy, consent behavior, and synthetic mailbox                  |
+| Field               | Prepared value or required decision                                                     |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| App name            | Keep `Swarm MCP personal preview` until an operator approves final branding             |
+| Homepage            | Saved: `https://dbc00per1812.github.io/swarm/`; OAuth domain acceptance remains pending |
+| Privacy URL         | `https://dbc00per1812.github.io/swarm/privacy.html`; proposed only, not published       |
+| Terms URL           | Optional; leave empty unless separately approved                                        |
+| Data Access         | Only `https://www.googleapis.com/auth/gmail.readonly`                                   |
+| Support contact     | Approved: `darragh.buckley1812@gmail.com`                                               |
+| Developer contacts  | Monitored project-owner contacts; keep private                                          |
+| Scope justification | Prepared text above                                                                     |
+| Demonstration URL   | Pending final branding, policy, consent behavior, and synthetic mailbox                 |
 
 The operator must approve any Limited Use statement as an operational
 commitment. Google requires an affirmative statement. See the
@@ -212,7 +274,7 @@ Capture these states with the final app name and consent language:
 2. Show GitHub account sign-in and a new Gmail account card.
 3. Show the Google consent screen in English with the requested scope.
 4. Show a completed connection without exposing tokens or browser proof.
-5. Show the client confirmation before a synthetic Gmail search.
+5. Show Swarm website approval and one exact-request retry from the agent.
 6. Show returned IDs and headers, with synthetic addresses and subjects.
 7. Show tool disabling, a rejected subsequent call, and Google grant revocation.
 8. Show team consent and withdrawal if Gmail sharing remains in public scope.
@@ -232,9 +294,11 @@ The gateway limits requests per user. Upstream failures return safe errors
 without raw response payloads. There is no Gmail-specific circuit breaker, retry
 backoff, or Retry-After handling.
 
-Reads are idempotent. Webhooks, write retries, and write deduplication do not
-apply. The API path uses Gmail v1. No separate deprecation-header monitor is
-configured. The callback uses HTTP 303. Browser messaging uses exact origins.
+Gmail reads do not modify mail. Swarm approval is single use, including failed
+attempts. A retry after consumption requires another approval. Webhooks and
+provider write deduplication do not apply. The API path uses Gmail v1. No
+separate deprecation-header monitor is configured. The callback uses HTTP 303.
+Browser messaging uses exact origins.
 
 UNKNOWN-BLOCKING: name the operator who handles Google notices, policy changes,
 incidents, and credential rotation. Before public release, assign monthly policy
@@ -252,17 +316,18 @@ zero-cost fallback. It does not meet public connection acceptance.
 
 ## Required operator facts
 
-- Public operator or business name, support address, and privacy-request
-  address.
+- Public operator or business name. The support and privacy address is approved.
 - Accepted ownership-verification method for the existing hosted addresses, or
   an owned domain if Google requires one.
 - Infrastructure logs, backup retention, and complete deletion process.
-- Permitted agent clients, their confirmation behavior, and their use of Gmail
-  data.
+- Permitted recipient data handling. Swarm confirmation no longer depends on
+  choosing a particular client.
 - Human access rules and confirmation of Limited Use operating commitments.
 - Whether Gmail tool sharing with organizations remains part of the public
   product.
 
-The draft policy is in `gmail-privacy-draft.md`. Terms remain an operator
-drafting decision. No public policy, OAuth verification submission, domain
-purchase, assessment, or OAuth production-status change is claimed.
+The policy candidate is in `gmail-privacy-draft.md`. Concrete submission fields
+and deployment checks are in `gmail-google-submission.md`. Terms remain an
+optional operator drafting decision. No public policy, OAuth verification
+submission, domain purchase, assessment, or OAuth production-status change is
+claimed.
