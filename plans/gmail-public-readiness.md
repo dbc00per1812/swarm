@@ -8,9 +8,9 @@ access remains blocked.
 The Google Cloud console identifies the correct project as `swarm-mcp`. Its
 project number matches the Gmail client configured for Swarm. The existing
 `gmail.readonly` scope is now declared and saved in Data Access. The application
-remains External and Testing. No public verification was submitted. The website,
-callback, credentials, active connections, and keys retain their existing
-production configuration.
+remains External and Testing. No OAuth verification was submitted. The working
+callback, credentials, connections, and keys retain their existing
+configuration.
 
 The source adds a Gmail data-use page and links it from the homepage. A notice
 explains Gmail access before the connection cards. It describes server access,
@@ -25,8 +25,17 @@ separate from the deployed website until release authorization.
 
 Search Console issued an HTML challenge for the existing GitHub Pages URL. The
 unchanged downloaded file is prepared at `web/googledfccf295f08c8741.html`. It
-has not been published. Website ownership has not been verified. This free
-URL-prefix method does not establish OAuth acceptance of hosted domains.
+is published in `gh-pages` commit `2777c372eac7d315465e0680808efe9b90626e2d`.
+The Pages deployment completed successfully. Its only added file is the approved
+verification asset. The public file matches the original download exactly.
+
+Search Console displayed “Ownership verified” through the HTML file method. This
+free URL-prefix method does not establish OAuth acceptance of hosted domains.
+
+The branding form was set to the Swarm homepage and additional GitHub Pages
+domain. The Save result remains unconfirmed. The Google page remained blank
+after reload. Recheck persisted branding values before continuing. No privacy or
+terms URL was entered.
 
 The verification file's SHA-256 is
 `ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`.

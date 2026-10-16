@@ -22,9 +22,10 @@ Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`,
 browser client. Generated files stay outside the source branch. GitHub Pages
 serves the `gh-pages` branch.
 
-The prepared Google site-verification file is `web/googledfccf295f08c8741.html`.
-Publish it only after the operator approves this verification attempt. Keep its
-original bytes and filename.
+The Google site-verification file is `web/googledfccf295f08c8741.html`. It is
+published and verifies the current Swarm URL-prefix property in Search Console.
+Keep its original bytes and filename in each website deployment to retain
+verification.
 
 Set `SWARM_UI_URL`, the Supabase Auth site URL, and its redirect allowlist to
 the website URL. Configure GitHub in Supabase Auth for account creation and

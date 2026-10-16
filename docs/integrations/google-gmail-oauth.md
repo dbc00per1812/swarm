@@ -9,7 +9,7 @@ returned citations. The API reference corrected an initial scope recommendation.
 
 ## Current Google configuration
 
-The authenticated Cloud console showed these settings on the research date:
+The authenticated Cloud console showed these settings at the initial inspection:
 
 | Field                              | Observed value                                              |
 | ---------------------------------- | ----------------------------------------------------------- |
@@ -30,6 +30,12 @@ That existing scope is now the only saved Data Access entry. The console
 displayed “Data access changes saved!” after Save. This declaration does not
 change requested permissions or approve the scope. The application remains in
 Testing.
+
+After site verification, the branding form was set to the existing Swarm
+homepage and the additional domain `dbc00per1812.github.io`. Save did not return
+a confirmed result. The page remained blank after reload. Recheck the saved
+branding values before further setup. The existing Supabase callback domain was
+not removed. No privacy or terms URL was entered.
 
 ## Integration contract
 
@@ -142,11 +148,13 @@ Do not move the working callback until the replacement is configured and tested.
 Search Console offers URL-prefix verification for
 `https://dbc00per1812.github.io/swarm/`. It issued the official file
 `googledfccf295f08c8741.html` for that URL. The unchanged downloaded file is
-prepared under `web/`. It is not published or verified. Its SHA-256 is recorded
-in `plans/gmail-public-readiness.md`.
+published from `gh-pages` commit `2777c372eac7d315465e0680808efe9b90626e2d`. The
+public file matches the download exactly. Search Console displayed “Ownership
+verified” with the HTML file method. Its SHA-256 is recorded in
+`plans/gmail-public-readiness.md`.
 
-HTML file verification can prove control of this URL without a custom domain.
-See Google's
+HTML file verification proved control of this URL without a custom domain. See
+Google's
 [site-verification methods](https://support.google.com/webmasters/answer/9008080?hl=en).
 That result alone would not prove OAuth acceptance of the GitHub Pages or
 Supabase domains. See Google's
@@ -252,5 +260,5 @@ zero-cost fallback. It does not meet public connection acceptance.
   product.
 
 The draft policy is in `gmail-privacy-draft.md`. Terms remain an operator
-drafting decision. No public policy, verification submission, domain purchase,
-assessment, or production publishing change is claimed.
+drafting decision. No public policy, OAuth verification submission, domain
+purchase, assessment, or OAuth production-status change is claimed.
