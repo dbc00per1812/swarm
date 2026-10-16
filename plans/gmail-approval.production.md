@@ -74,11 +74,15 @@ result count. No message is sent or modified.
 The user reported approving the request. The exact retry remained blocked.
 A database check showed no recorded approval, use, or denial. The production
 review panel also showed an unchecked permitted-use checkbox. The user was
-asked to complete the visible approval and report any error. No successful real
-Gmail retrieval is claimed. A new request is required after expiry.
+asked to complete the visible approval and report any error. The request expired
+without a recorded decision. A fresh request for the same query was prepared.
+It expires at 19:09:21 Chicago time. No successful real Gmail retrieval is claimed.
 
 The successful hosted synthetic checks establish approval behavior. They do not
 establish a successful real Google API response or a complete OAuth demonstration.
+
+The source branch is published in [draft pull request 7](https://github.com/dbc00per1812/swarm/pull/7).
+No merge to `main` is claimed.
 
 ## Remaining public release conditions
 
