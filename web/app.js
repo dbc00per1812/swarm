@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { createTeams } from "./teams.js";
+import { createGmailApprovals } from "./gmail-approvals.js";
 import { endpoint } from "./config.js";
 
 const byId = (id) => document.getElementById(id);
@@ -21,6 +22,47 @@ let generation = 0;
 let refreshSequence = 0;
 let authSequence = 0;
 let keys = [];
+const gmailApprovals = createGmailApprovals({
+  api,
+  node,
+  button,
+  message,
+  getGeneration: () => generation,
+  getUserId: () => userId,
+});
+let cancelGmailConsent;
+function gmailConsent() {
+  const dialog = byId("gmail-consent");
+  const previous = document.activeElement;
+  return new Promise((resolve) => {
+    function finish(value) {
+      byId("gmail-consent-cancel").removeEventListener("click", cancel);
+      byId("gmail-consent-continue").removeEventListener("click", accept);
+      dialog.removeEventListener("cancel", cancel);
+      cancelGmailConsent = null;
+      dialog.close();
+      previous?.focus();
+      resolve(value);
+    }
+    function cancel(event) {
+      event?.preventDefault();
+      finish(null);
+    }
+    function accept() {
+      const authorizationPopup = globalThis.open(
+        "about:blank",
+        "_blank",
+        "width=640,height=760",
+      );
+      finish({ authorizationPopup });
+    }
+    cancelGmailConsent = cancel;
+    byId("gmail-consent-cancel").addEventListener("click", cancel);
+    byId("gmail-consent-continue").addEventListener("click", accept);
+    dialog.addEventListener("cancel", cancel);
+    dialog.showModal();
+  });
+}
 const teams = createTeams({
   api,
   node,
@@ -82,6 +124,8 @@ function clearPrivateView() {
   generation++;
   userId = null;
   teams.clear();
+  gmailApprovals.clear();
+  cancelGmailConsent?.();
   newKey = null;
   keys = [];
   if (popup && !popup.closed) popup.close();
@@ -266,11 +310,18 @@ function accountCard(connection) {
       button(
         connection.status === "connected" ? "Reconnect" : "Connect",
         async () => {
-          const authorizationPopup = globalThis.open(
-            "about:blank",
-            "_blank",
-            "width=640,height=760",
-          );
+          const revision = generation;
+          const consent = connection.provider === "gmail"
+            ? await gmailConsent()
+            : undefined;
+          if (consent === null || revision !== generation) return;
+          const authorizationPopup = consent
+            ? consent.authorizationPopup
+            : globalThis.open(
+              "about:blank",
+              "_blank",
+              "width=640,height=760",
+            );
           popup = authorizationPopup;
           try {
             const value = await api(
@@ -494,9 +545,16 @@ async function showSession(session) {
   renderKeys();
   const revision = generation;
   await refresh();
+  if (revision !== generation) return;
+  await gmailApprovals.load();
   if (revision === generation) message("Connections loaded.");
 }
 async function start() {
+  if (globalThis.top !== globalThis.self) {
+    throw new Error(
+      "Open Swarm directly to manage connections and approve Gmail searches.",
+    );
+  }
   const response = await fetch(endpoint + "/config", {
     signal: AbortSignal.timeout(15000),
   });
@@ -532,6 +590,7 @@ async function start() {
     (event) =>
       busy(event.currentTarget, async () => {
         teams.prepareSignIn();
+        gmailApprovals.prepareSignIn();
         const { error } = await auth.auth.signInWithOAuth({
           provider: "github",
           options: { redirectTo: new URL("./", location.href).href },

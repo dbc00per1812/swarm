@@ -18,6 +18,14 @@
       <h1>Your tools.<br>Your connections.</h1>
       <p
         class="intro">Connect your accounts once. Choose the tools your agents can use.</p>
+      <section aria-labelledby="about-title">
+        <h2 id="about-title">What Swarm does</h2>
+        <p>Swarm gives agents selected tools for GitHub pull requests, Slack message search, Linear issues, and Gmail search.</p>
+        <p>You choose the connected accounts and enabled tools. You can also share selected tools with organization members.</p>
+        <p>Swarm stores service credentials on its server. It sends tool results to the requesting agent.</p>
+        <p>GitHub provides Swarm account sign-in. Google authorization connects Gmail separately.</p>
+        <p>Gmail is currently available only to approved Google test users. <a href="gmail-data.html">Read about Gmail data use and access removal</a>.</p>
+      </section>
       <p id="notice" role="status" aria-live="polite"
         aria-atomic="true">Loading Swarm…</p>
       <p id="error" role="alert" aria-atomic="true"></p>
@@ -56,6 +64,8 @@
             class="muted">Google grants read access to messages and settings. The current tool does not fetch message bodies or attachments.</p>
           <p><a href="gmail-data.html">Read about Gmail data use and access removal</a></p>
         </section>
+        <section id="gmail-search-review" class="service" tabindex="-1"
+          aria-label="Gmail search approval" hidden></section>
         <div id="services"></div>
         <section class="service" aria-labelledby="custom-title">
           <h3 id="custom-title">Add a custom MCP server</h3>
@@ -99,6 +109,20 @@
       </section>
       <noscript>Enable JavaScript to use Swarm Connections.</noscript>
     </main>
+    <dialog id="gmail-consent" aria-labelledby="gmail-consent-title"
+      aria-describedby="gmail-consent-description">
+      <h2 id="gmail-consent-title">Connect Gmail to Swarm</h2>
+      <div id="gmail-consent-description">
+        <p>Google grants Swarm read access to Gmail messages and settings. The current search tool does not fetch message bodies or attachments.</p>
+        <p>Swarm sends search queries to Google. It sends message IDs, thread IDs, and the Subject, From, and Date headers to your requesting agent.</p>
+        <p>Swarm stores encrypted access and refresh tokens and your Gmail address. If you share the tool, organization members' agents can request mailbox searches.</p>
+        <p>Each search requires approval on the Swarm website. Use an agent whose settings meet Google's data-use rules.</p>
+        <p>Gmail is currently limited to approved Google test users. Test access can expire after seven days.</p>
+        <p><a href="gmail-data.html" target="_blank" rel="noopener">Read Gmail data use and access removal</a></p>
+      </div>
+      <div
+        class="actions"><button id="gmail-consent-cancel" type="button" class="quiet" autofocus>Cancel Gmail connection</button><button id="gmail-consent-continue" type="button">Continue to Google</button></div>
+    </dialog>
     <footer>
       <p>Your service credentials stay on the Swarm server. Agents receive tool results.</p>
       <a href="gmail-data.html">Gmail data use and access removal</a>

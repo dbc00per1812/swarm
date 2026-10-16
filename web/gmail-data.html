@@ -33,11 +33,18 @@
         <p>Swarm stores the connection name, Gmail address, settings, and tool permissions in its Supabase database.</p>
         <p>The server encrypts saved access and refresh tokens. A refresh token lets the server obtain access after the current access token expires.</p>
         <p>The Gmail tool processes search results for each request. Its application code does not save message headers or search results in the database.</p>
+        <p>Search approval requests temporarily store the encrypted query and result limit. The server clears this encrypted data after use or denial.</p>
+        <p>Expired requests cannot execute. During approval activity, Swarm clears expired query data that is available for cleanup. Locked records can require later activity.</p>
+        <p>Approval identifiers, key hashes, request hashes, and decision times remain in the database. These records have no automatic expiry.</p>
         <p>This statement does not describe infrastructure logs, backups, or the storage practices of your agent provider.</p>
       </section>
       <section aria-labelledby="sharing-title">
         <h2 id="sharing-title">Who can receive results</h2>
-        <p>Agents with your Swarm key can use your enabled Gmail tool. Swarm sends the results through its server to the requesting agent.</p>
+        <p>Agents with your Swarm key can request searches through your enabled Gmail tool. Each search requires approval on the Swarm website.</p>
+        <p>The approval page shows the mailbox, query, result limit, and agent key fingerprint. A fingerprint is a short identifier for the key.</p>
+        <p>Approval permits one attempt for that request and key within ten minutes. Changing the query, limit, or connection requires another approval.</p>
+        <p>You must confirm permitted agent data use before approval. Swarm sends approved results through its server to the requesting agent.</p>
+        <p>Swarm does not verify the agent provider's identity. Anyone holding the requesting key can receive that request's approved results.</p>
         <p>If you share the Gmail tool with an organization, members' agents can search the connected mailbox. Sharing applies to the tool, not selected messages.</p>
         <p>Sharing does not expose your saved Google credentials to organization members. Your agent provider can store results under its own terms.</p>
         <p>Use an agent only if its handling of Gmail data meets your requirements and Google's applicable data-use rules.</p>

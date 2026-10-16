@@ -56,6 +56,7 @@ function fixture(upstream?: typeof fetch) {
     swarm_user_connections: [],
     swarm_user_mcp_keys: [],
     swarm_user_oauth_states: [],
+    swarm_gmail_approvals: [],
   };
   const access: {
     available: boolean;
@@ -131,6 +132,46 @@ function fixture(upstream?: typeof fetch) {
         );
         access.afterRead?.();
         return response;
+      }
+      if (table === "swarm_gmail_approval") {
+        const rows = tables.swarm_gmail_approvals;
+        const row = rows.find((r) =>
+          r.id === body.p_id && r.user_id === body.p_user_id
+        );
+        const live = row && Date.parse(String(row.expires_at)) > Date.now();
+        if (body.p_action === "create") {
+          rows.push({
+            ...body.p_input,
+            id: body.p_id,
+            user_id: body.p_user_id,
+            approved_at: null,
+            consumed_at: null,
+            denied_at: null,
+            expires_at: new Date(Date.now() + 600000).toISOString(),
+          });
+          return Response.json(true);
+        }
+        if (!live) return Response.json(null);
+        if (body.p_action === "get") return Response.json(row);
+        if (body.p_action === "approve" || body.p_action === "deny") {
+          if (row.consumed_at || row.denied_at || row.approved_at) {
+            return Response.json(false);
+          }
+          row[body.p_action === "approve" ? "approved_at" : "denied_at"] =
+            new Date().toISOString();
+          if (body.p_action === "deny") row.ciphertext = null;
+          return Response.json(true);
+        }
+        if (body.p_action === "consume") {
+          if (
+            !row.approved_at || row.consumed_at || row.denied_at ||
+            row.key_hash !== body.p_input.key_hash ||
+            row.request_hash !== body.p_input.request_hash
+          ) return Response.json(false);
+          row.consumed_at = new Date().toISOString();
+          row.ciphertext = null;
+          return Response.json(true);
+        }
       }
       const rows = tables.swarm_user_connections;
       const row = rows.find((row) =>
@@ -1031,9 +1072,21 @@ Deno.test("shared Gmail checks access before each message request", async () => 
   }, "Mail");
   f.shares.set(id, ["gmail_search"]);
   const key = await f.key(1);
-  const result = await f.rpc(key.token, "tools/call", {
+  const pending = await f.rpc(key.token, "tools/call", {
     name: "gmail_search",
     arguments: { query: "fixture", limit: 2 },
+  });
+  const approval = JSON.parse(pending.result.content[0].text).approvalId;
+  assertEquals(
+    (await f.api(1, `gmail-approvals/${approval}`, "POST", {
+      action: "approve",
+      limitedUseAccepted: true,
+    })).status,
+    200,
+  );
+  const result = await f.rpc(key.token, "tools/call", {
+    name: "gmail_search",
+    arguments: { query: "fixture", limit: 2, approval_id: approval },
   });
   assertEquals(result.result.isError, true);
   assertEquals(reads, 1);
@@ -1061,5 +1114,138 @@ Deno.test("routine native refresh preserves sharing through a personal key", asy
       arguments: { owner: "demo", repo: "project" },
     });
     assertEquals(result.result.isError, undefined);
+  }
+});
+
+Deno.test("Gmail requires browser approval for the exact search and key, then permits one execution", async () => {
+  let gmailReads = 0;
+  const f = fixture((input) => {
+    const url = new URL(String(input));
+    if (url.hostname !== "gmail.googleapis.com") {
+      throw new Error("Unexpected upstream.");
+    }
+    gmailReads++;
+    return Promise.resolve(Response.json({ messages: [] }));
+  });
+  const added = await f.api(0, "connections", "POST", {
+    kind: "native",
+    provider: "gmail",
+    name: "Synthetic mailbox",
+  });
+  const { connection } = await added.json();
+  const row = await f.store.get(users[0], connection.id);
+  await f.store.saveCredential(
+    row,
+    { accessToken: "synthetic-gmail-token" },
+    "synthetic@example.test",
+  );
+  const first = await f.key(0), other = await f.key(0);
+  const args = {
+    connection_id: connection.id,
+    query: "subject:synthetic",
+    limit: 1,
+  };
+  const call = (token: string, arguments_: unknown) =>
+    f.rpc(token, "tools/call", { name: "gmail_search", arguments: arguments_ });
+  const requested = await call(first.token, args);
+  assertEquals(requested.result.isError, true);
+  const pending = JSON.parse(requested.result.content[0].text);
+  assertEquals(new URL(pending.approvalUrl).origin, "https://swarm.test");
+  assertEquals(gmailReads, 0);
+  const requestId = pending.approvalId;
+  assertEquals((await f.api(1, `gmail-approvals/${requestId}`)).status, 404);
+  const preview = await (await f.api(0, `gmail-approvals/${requestId}`)).json();
+  assertEquals(preview.query, args.query);
+  assertEquals(preview.limit, 1);
+  assertEquals(preview.accountLabel, "synthetic@example.test");
+  assertEquals(
+    (await f.api(0, `gmail-approvals/${requestId}`, "POST", {
+      action: "approve",
+    })).status,
+    400,
+  );
+  const retry = { ...args, approval_id: requestId };
+  assertEquals((await call(first.token, retry)).result.isError, true);
+  assertEquals(gmailReads, 0);
+  assertEquals(
+    (await f.api(0, `gmail-approvals/${requestId}`, "POST", {
+      action: "approve",
+      limitedUseAccepted: true,
+    })).status,
+    200,
+  );
+  for (
+    const [token, changed] of [[other.token, retry], [first.token, {
+      ...retry,
+      query: "other",
+    }], [first.token, { ...retry, limit: 2 }]] as const
+  ) {
+    assertEquals((await call(token, changed)).result.isError, true);
+  }
+  assertEquals(gmailReads, 0);
+  const results = await Promise.all([
+    call(first.token, retry),
+    call(first.token, retry),
+  ]);
+  assertEquals(results.filter((r) => !r.result.isError).length, 1);
+  assertEquals(gmailReads, 1);
+  assertEquals(f.tables.swarm_gmail_approvals[0].ciphertext, null);
+  assertEquals((await call(first.token, retry)).result.isError, true);
+  assertEquals(gmailReads, 1);
+});
+
+Deno.test("Gmail denies expired, rejected, changed, and revoked access without contacting Google", async () => {
+  for (
+    const scenario of [
+      "expired",
+      "denied",
+      "changed",
+      "disabled",
+      "revoked",
+      "unshared",
+    ] as const
+  ) {
+    const f = fixture(() => {
+      throw new Error("Google must not receive this request.");
+    });
+    const response = await f.api(0, "connections", "POST", {
+      kind: "native",
+      provider: "gmail",
+      name: "Synthetic",
+    });
+    const { connection } = await response.json();
+    await f.store.saveCredential(await f.store.get(users[0], connection.id), {
+      accessToken: "synthetic-token",
+    }, "synthetic@example.test");
+    if (scenario === "unshared") f.shares.set(connection.id, ["gmail_search"]);
+    const caller = scenario === "unshared" ? 1 : 0;
+    const key = await f.key(caller);
+    const args = { connection_id: connection.id, query: "synthetic" };
+    const call = (arguments_: unknown) =>
+      f.rpc(key.token, "tools/call", {
+        name: "gmail_search",
+        arguments: arguments_,
+      });
+    const pending = JSON.parse((await call(args)).result.content[0].text);
+    const id = pending.approvalId;
+    assertEquals(
+      (await f.api(caller, `gmail-approvals/${id}`, "POST", {
+        action: scenario === "denied" ? "deny" : "approve",
+        limitedUseAccepted: true,
+      })).status,
+      200,
+    );
+    const row = f.tables.swarm_user_connections[0];
+    if (scenario === "expired") {
+      f.tables.swarm_gmail_approvals[0].expires_at = new Date(0).toISOString();
+    }
+    if (scenario === "changed") row.revision = Number(row.revision) + 1;
+    if (scenario === "disabled") row.enabled_tools = [];
+    if (scenario === "revoked") {
+      f.tables.swarm_user_mcp_keys[0].revoked_at = new Date().toISOString();
+    }
+    if (scenario === "unshared") f.shares.clear();
+    const result = await call({ ...args, approval_id: id });
+    assert(result.status === 401 || result.result.isError, scenario);
   }
 });

@@ -4,6 +4,8 @@
   background: #101316;
   color: #f2f4f4;
   font-synthesis: none;
+  --text: #f2f4f4;
+  --panel: #191e22;
   --muted: #b3babe;
   --line: #4b5359;
   --accent: #cbef82;
@@ -342,5 +344,31 @@ footer {
   overflow-wrap: anywhere;
 }
 #team-detail h3 {
+  overflow-wrap: anywhere;
+}
+
+/* Native dialogs provide keyboard focus containment and Escape cancellation. */
+dialog {
+  max-width: min(42rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.5rem;
+}
+dialog::backdrop {
+  background: rgb(0 0 0 / 65%);
+}
+#gmail-search-review:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+#gmail-search-review code {
+  overflow-wrap: anywhere;
+}
+#gmail-search-review pre {
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

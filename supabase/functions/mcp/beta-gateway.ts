@@ -27,6 +27,7 @@ import {
 } from "./user-store.ts";
 
 import { createTeamRoutes } from "./teams.ts";
+import { GmailApprovals } from "./gmail-approvals.ts";
 
 export interface BetaConfig extends OAuthConfig {
   projectUrl: string;
@@ -100,13 +101,18 @@ function canonical(value: unknown) {
         : node,
   );
 }
-const toolError = (id: unknown, message: string) =>
+const toolError = (id: unknown, message: string | Record<string, unknown>) =>
   Response.json({
     jsonrpc: "2.0",
     id: id ?? null,
     result: {
       isError: true,
-      content: [{ type: "text", text: JSON.stringify({ error: message }) }],
+      content: [{
+        type: "text",
+        text: JSON.stringify(
+          typeof message === "string" ? { error: message } : message,
+        ),
+      }],
     },
   }, { headers: { "Cache-Control": "no-store" } });
 
@@ -117,6 +123,7 @@ export function createBetaGateway(
 ) {
   const oauth = providerOAuth(config, fetcher);
   const teams = createTeamRoutes(store, config.uiUrl);
+  const gmailApprovals = new GmailApprovals(store, config.uiUrl);
   const origin = new URL(config.uiUrl).origin;
   const base = new URL(config.endpointUrl).pathname.replace(/\/$/, "");
   const counts = new Map<string, { until: number; count: number }>();
@@ -281,6 +288,24 @@ export function createBetaGateway(
         );
       }
       const row = selected;
+      if (name === "gmail_search") {
+        try {
+          const pending = await gmailApprovals.require(
+            user,
+            token!,
+            row,
+            body.params?.arguments,
+          );
+          if (pending) return toolError(body.id, pending);
+        } catch (error) {
+          return toolError(
+            body.id,
+            error instanceof ApiError
+              ? error.message
+              : "This Gmail approval request failed.",
+          );
+        }
+      }
       effective = await nativeRuntime(
         row,
         () => store.permitted(user, row, name),
@@ -454,6 +479,30 @@ export function createBetaGateway(
       }
       const user = await identity(request);
       rate(`api:${user}`, 60);
+      const gmailApproval = path.match(
+        /^\/v1\/gmail-approvals\/([a-f0-9-]{36})$/,
+      );
+      if (gmailApproval) {
+        if (request.method === "GET") {
+          return reply(
+            await gmailApprovals.review(user, gmailApproval[1]),
+            200,
+            cors,
+          );
+        }
+        if (request.method === "POST") {
+          return reply(
+            await gmailApprovals.decide(
+              user,
+              gmailApproval[1],
+              await input(request),
+            ),
+            200,
+            cors,
+          );
+        }
+        return reply({ error: "Use GET or POST." }, 405, cors);
+      }
       const teamResponse = await teams(path, request, user, input);
       if (teamResponse) {
         return reply(teamResponse.body, teamResponse.status, cors);

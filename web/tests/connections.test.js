@@ -32,9 +32,14 @@ const initial = ["Work", "Personal"].map((name, i) => ({
   enabledTools: ["github_list_pull_requests"],
 }));
 
-async function page(saved, intercept = () => undefined) {
+async function page(
+  saved,
+  intercept = () => undefined,
+  fragment = "",
+  savedSession = [],
+) {
   const dom = new JSDOM(await readFile("web/index.html", "utf8"), {
-    url: "https://fixture.test/swarm/",
+    url: "https://fixture.test/swarm/" + fragment,
     runScripts: "outside-only",
     pretendToBeVisual: true,
   });
@@ -102,6 +107,13 @@ async function page(saved, intercept = () => undefined) {
       throw new Error(`Unexpected fixture route: ${path}`);
     },
   });
+  w.HTMLDialogElement.prototype.showModal = function () {
+    this.open = true;
+  };
+  w.HTMLDialogElement.prototype.close = function () {
+    this.open = false;
+    this.dispatchEvent(new w.Event("close"));
+  };
   w.confirm = () => true;
   w.navigator.locks = undefined;
   Object.defineProperty(w.navigator, "clipboard", {
@@ -113,6 +125,7 @@ async function page(saved, intercept = () => undefined) {
     },
   });
   if (saved) { for (const [k, v] of saved) w.localStorage.setItem(k, v); }
+  for (const [k, v] of savedSession) w.sessionStorage.setItem(k, v);
   w.eval(
     (await readFile("web/dist/app.js", "utf8")).replace(
       /https:\/\/xatpcwatmcpjznhwgpit.supabase.co\/functions\/v1\/mcp/g,
@@ -426,3 +439,232 @@ for (const unavailable of [false, true]) {
     }
   });
 }
+
+test("Gmail disclosure requires an explicit choice before Google authorization", async () => {
+  let authorizations = 0, popup;
+  const p = await page(undefined, (path) => {
+    if (path === "/v1/connections") {
+      return Response.json({
+        endpointUrl: endpoint,
+        connections: initial.map((c) => ({ ...c, provider: "gmail" })),
+      });
+    }
+    if (path.endsWith("/authorize")) {
+      authorizations++;
+      return Response.json({
+        authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?state=${
+          "1".repeat(64)
+        }`,
+        completionSecret: "a".repeat(64),
+      });
+    }
+  });
+  p.w.open = () =>
+    popup = { location: "about:blank", sessionStorage: new Map(), close() {} };
+  try {
+    await signIn(p.w);
+    const connect = () =>
+      p.w.document.querySelector("article.service .actions button").click();
+    connect();
+    await until(() => p.w.document.querySelector("#gmail-consent")?.open);
+    const dialog = p.w.document.querySelector("#gmail-consent");
+    assert.equal(dialog.tagName, "DIALOG");
+    assert.equal(
+      p.w.document.getElementById(dialog.getAttribute("aria-labelledby"))
+        .textContent,
+      "Connect Gmail to Swarm",
+    );
+    assert.match(dialog.textContent, /Subject, From, and Date/);
+    assert.match(dialog.textContent, /organization/);
+    assert.equal(authorizations, 0);
+    assert.equal(popup, undefined);
+    click(p.w, "Cancel Gmail connection");
+    await until(() => !dialog.open);
+    assert.equal(authorizations, 0);
+    await until(() =>
+      p.w.document.querySelector("article.service .actions button")
+        .getAttribute("aria-disabled") === "false"
+    );
+    p.w.open = () =>
+      popup = {
+        location: "about:blank",
+        sessionStorage: { setItem() {} },
+        close() {},
+      };
+    connect();
+    await until(() => dialog.open);
+    click(p.w, "Continue to Google");
+    await until(() =>
+      popup?.location.startsWith("https://accounts.google.com/")
+    );
+    assert.equal(authorizations, 1);
+  } finally {
+    p.close();
+  }
+});
+
+for (const action of ["approve", "deny"]) {
+  test(`A Gmail search review shows exact data and requires explicit ${action}`, async () => {
+    const id = "00000000-0000-4000-8000-000000000099";
+    let decision;
+    const p = await page(undefined, (path, options) => {
+      if (path !== `/v1/gmail-approvals/${id}`) return;
+      if (options.method === "POST") {
+        decision = JSON.parse(options.body);
+        return Response.json({
+          status: action === "approve" ? "approved" : "denied",
+        });
+      }
+      return Response.json({
+        id,
+        status: "pending",
+        connectionName: "Synthetic mail",
+        accountLabel: "synthetic@example.test",
+        keyFingerprint: "0123456789ab",
+        expiresAt: new Date(Date.now() + 600000).toISOString(),
+        query: "subject:<synthetic>",
+        limit: 2,
+      });
+    }, `#gmail-approval=${id}`);
+    try {
+      await signIn(p.w);
+      await until(() =>
+        p.w.document.querySelector("#gmail-search-review")?.textContent
+          .includes("subject:<synthetic>")
+      );
+      const review = p.w.document.querySelector("#gmail-search-review");
+      assert.match(review.textContent, /synthetic@example.test/);
+      assert.match(review.textContent, /2/);
+      assert.equal(review.querySelector("synthetic"), null);
+      assert.equal(decision, undefined);
+      const checkbox = review.querySelector('input[type="checkbox"]');
+      assert.ok(review.querySelector(`label[for="${checkbox.id}"]`));
+      if (action === "approve") {
+        click(p.w, "Approve this Gmail search");
+        await until(() =>
+          p.w.document.querySelector("#error").textContent.includes("Confirm")
+        );
+        assert.equal(decision, undefined);
+        checkbox.checked = true;
+      }
+      click(
+        p.w,
+        action === "approve"
+          ? "Approve this Gmail search"
+          : "Deny this Gmail search",
+      );
+      await until(() => decision);
+      assert.equal(decision.action, action);
+      await until(() =>
+        review.textContent.includes(
+          action === "approve" ? "approved" : "denied",
+        )
+      );
+      assert.equal(review.querySelector('input[type="checkbox"]'), null);
+      click(p.w, "Sign out");
+      await until(() => review.hidden);
+      assert.equal(review.textContent, "");
+    } finally {
+      p.close();
+    }
+  });
+}
+
+test("A Gmail approval request survives sign-in and reload without storing the query", async () => {
+  const id = "00000000-0000-4000-8000-000000000099";
+  const intercept = (path) =>
+    path === `/v1/gmail-approvals/${id}`
+      ? Response.json({
+        id,
+        status: "pending",
+        connectionName: "Synthetic",
+        accountLabel: "synthetic@example.test",
+        keyFingerprint: "0123456789ab",
+        expiresAt: new Date(Date.now() + 600000).toISOString(),
+        query: "private synthetic query",
+        limit: 1,
+      })
+      : undefined;
+  const p = await page(undefined, intercept, `#gmail-approval=${id}`);
+  let stored;
+  try {
+    await until(() =>
+      p.w.document.querySelector("#notice").textContent !== "Loading Swarm…"
+    );
+    stored = Object.entries(p.w.sessionStorage);
+    assert.ok(stored.some(([, value]) => value.includes(id)));
+    assert.ok(
+      !stored.some(([, value]) => value.includes("private synthetic query")),
+    );
+    assert.equal(p.w.location.hash, "");
+  } finally {
+    p.close();
+  }
+  const next = await page(undefined, intercept, "", stored);
+  try {
+    await signIn(next.w);
+    await until(() =>
+      next.w.document.querySelector("#gmail-search-review").textContent
+        .includes("private synthetic query")
+    );
+  } finally {
+    next.close();
+  }
+});
+
+test("Blocked session storage stops GitHub sign-in from losing a Gmail request", async () => {
+  const p = await page(
+    undefined,
+    undefined,
+    "#gmail-approval=00000000-0000-4000-8000-000000000099",
+  );
+  try {
+    await until(() =>
+      p.w.document.querySelector("#notice").textContent !== "Loading Swarm…"
+    );
+    p.w.Storage.prototype.setItem = () => {
+      throw new Error("Synthetic storage failure");
+    };
+    click(p.w, "Continue with GitHub");
+    await until(() =>
+      p.w.document.querySelector("#error").textContent.includes(
+        "Allow session storage",
+      )
+    );
+    assert.equal(p.w.location.pathname, "/swarm/");
+  } finally {
+    p.close();
+  }
+});
+
+test("Swarm refuses connection and approval controls inside a frame", async () => {
+  const source = await readFile("web/index.html", "utf8");
+  const dom = new JSDOM('<iframe title="Synthetic frame"></iframe>', {
+    url: "https://fixture.test/swarm/",
+    runScripts: "outside-only",
+  });
+  try {
+    const frame = dom.window.document.querySelector("iframe").contentWindow;
+    frame.document.open();
+    frame.document.write(source);
+    frame.document.close();
+    let requests = 0;
+    frame.fetch = () => {
+      requests++;
+      throw new Error("A frame must not request configuration.");
+    };
+    frame.eval(await readFile("web/dist/app.js", "utf8"));
+    await until(() =>
+      frame.document.querySelector("#error").textContent.includes(
+        "Open Swarm directly",
+      )
+    );
+    assert.equal(requests, 0);
+    assert.equal(
+      frame.document.querySelector("#connections-panel").hidden,
+      true,
+    );
+  } finally {
+    dom.window.close();
+  }
+});
