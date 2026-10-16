@@ -119,6 +119,10 @@ handling.
 The Management API reports database region `us-east-1` and project status
 `ACTIVE_HEALTHY`. Log and backup retention remain unverified.
 
+A follow-up backup query returned zero listed backups and `pitr_enabled: false`.
+The physical-backup metadata object was empty. This snapshot does not establish
+historical backup retention or infrastructure-log retention.
+
 ## Public release requirements
 
 The public server processes restricted Gmail data. Encryption does not create an

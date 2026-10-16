@@ -37,6 +37,12 @@ domain. The Save result remains unconfirmed. The Google page remained blank
 after reload. Recheck persisted branding values before continuing. No privacy or
 terms URL was entered.
 
+A follow-up Management API check returned zero listed backups and disabled
+point-in-time recovery. The physical-backup metadata object was empty.
+Historical retention and infrastructure-log retention remain unverified. The
+branding page still returned no application content during the follow-up browser
+check.
+
 The verification file's SHA-256 is
 `ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`.
 
