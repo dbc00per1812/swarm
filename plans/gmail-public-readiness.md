@@ -23,6 +23,14 @@ incomplete policy draft is in `docs/integrations/gmail-privacy-draft.md`. Both
 documents mark missing facts and public release conditions. The source remains
 separate from the deployed website until release authorization.
 
+Search Console issued an HTML challenge for the existing GitHub Pages URL. The
+unchanged downloaded file is prepared at `web/googledfccf295f08c8741.html`. It
+has not been published. Website ownership has not been verified. This free
+URL-prefix method does not establish OAuth acceptance of hosted domains.
+
+The verification file's SHA-256 is
+`ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`.
+
 ## Verification
 
 - `npm test`: 32 passing browser module tests; both bundles build.
@@ -49,7 +57,8 @@ additional records.
 
 ## Remaining public release conditions
 
-- Confirm the public operator, contacts, and owned domain.
+- Confirm the public operator, contacts, and an accepted site-ownership
+  verification method.
 - Confirm logs, backup retention, deletion, and legacy credential handling.
 - Complete the privacy policy and applicable operator terms.
 - Demonstrate permitted agent data use and granular confirmation of Gmail agent

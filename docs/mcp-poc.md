@@ -22,6 +22,10 @@ Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`,
 browser client. Generated files stay outside the source branch. GitHub Pages
 serves the `gh-pages` branch.
 
+The prepared Google site-verification file is `web/googledfccf295f08c8741.html`.
+Publish it only after the operator approves this verification attempt. Keep its
+original bytes and filename.
+
 Set `SWARM_UI_URL`, the Supabase Auth site URL, and its redirect allowlist to
 the website URL. Configure GitHub in Supabase Auth for account creation and
 sign-in. Add `https://<project-ref>.supabase.co/auth/v1/callback` to the GitHub

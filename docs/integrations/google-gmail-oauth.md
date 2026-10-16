@@ -3,8 +3,8 @@
 Research date: 2026-10-15, America/Chicago. Status: preparation only. Public
 Gmail access is not enabled or verified.
 
-Notebook: `f01-int/Google-Gmail/public-oauth`. The notebook contains nine
-official sources. All nine additions succeeded. The query used the sources and
+Notebook: `f01-int/Google-Gmail/public-oauth`. The notebook contains eleven
+official sources. All eleven additions succeeded. The query used the sources and
 returned citations. The API reference corrected an initial scope recommendation.
 
 ## Current Google configuration
@@ -134,10 +134,24 @@ storage, and sharing. See the
 [verification requirements](https://support.google.com/cloud/answer/13464321?hl=en).
 The technical notice in `web/gmail-data.html` does not satisfy the complete
 privacy-policy requirement. The current GitHub Pages and Supabase addresses do
-not establish verified domain ownership. UNKNOWN-BLOCKING: choose an owned
-domain and prove the relevant website and callback-domain control.
+not establish verified domain ownership. UNKNOWN-BLOCKING: prove website and
+callback-domain control through a method Google accepts for OAuth verification.
 
 Do not move the working callback until the replacement is configured and tested.
+
+Search Console offers URL-prefix verification for
+`https://dbc00per1812.github.io/swarm/`. It issued the official file
+`googledfccf295f08c8741.html` for that URL. The unchanged downloaded file is
+prepared under `web/`. It is not published or verified. Its SHA-256 is recorded
+in `plans/gmail-public-readiness.md`.
+
+HTML file verification can prove control of this URL without a custom domain.
+See Google's
+[site-verification methods](https://support.google.com/webmasters/answer/9008080?hl=en).
+That result alone would not prove OAuth acceptance of the GitHub Pages or
+Supabase domains. See Google's
+[homepage requirements](https://support.google.com/cloud/answer/13807376?hl=en).
+No domain purchase is needed to attempt this limited site-control check.
 
 Google's current Workspace policy addresses MCP and agent behavior explicitly.
 It requires prominent disclosure, affirmative consent, and granular confirmation
@@ -157,8 +171,8 @@ does not resolve that requirement.
 | ------------------- | ---------------------------------------------------------------------------------------- |
 | App name            | Proposed: `Swarm`; confirm before saving                                                 |
 | Homepage            | Existing website: `https://dbc00per1812.github.io/swarm/`; final verified domain pending |
-| Privacy URL         | `<verified homepage origin>/privacy.html`; draft below is not published                  |
-| Terms URL           | `<verified homepage origin>/terms.html`; operator terms pending                          |
+| Privacy URL         | `<verified homepage base URL>privacy.html`; draft below is not published                 |
+| Terms URL           | `<verified homepage base URL>terms.html`; operator terms pending                         |
 | Data Access         | Only `https://www.googleapis.com/auth/gmail.readonly`                                    |
 | Support contact     | Public support address selected by the operator                                          |
 | Developer contacts  | Monitored project-owner contacts; keep private                                           |
@@ -228,8 +242,8 @@ zero-cost fallback. It does not meet public connection acceptance.
 
 - Public operator or business name, support address, and privacy-request
   address.
-- Existing owned domain for the homepage and privacy page; domain administrator
-  access.
+- Accepted ownership-verification method for the existing hosted addresses, or
+  an owned domain if Google requires one.
 - Infrastructure logs, backup retention, and complete deletion process.
 - Permitted agent clients, their confirmation behavior, and their use of Gmail
   data.
