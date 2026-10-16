@@ -1,12 +1,31 @@
 # Swarm privacy publication package
 
-Prepared: 2026-10-16, America/Chicago. Status: ready for publication review.
-Nothing in this package has been published. It does not deploy the prepared
-Gmail approval gateway or expand Google audience access.
+Published: 2026-10-16, America/Chicago. The current-preview policy and homepage
+link are public. Google Branding stores the public privacy URL. This publication
+did not deploy the prepared Gmail approval gateway or expand Google audience
+access.
+
+## Verified release
+
+- Pages commit: `9ac3a7cc74d68a38b0580b4d8eed3f3a4c339a77`.
+- Pages build: `built`, with no reported error.
+- Effective date: 16 October 2026.
+- Public policy: HTTP 200, matching the reviewed source exactly.
+- Policy SHA-256:
+  `d83cdb5c73801fa95a1a885d6b2a300344bf6a60c5e9661035487afb8c833242`.
+- Homepage: HTTP 200, with the privacy link.
+- Existing application, callback, stylesheet, and verification files: unchanged.
+- Google Branding: exact privacy URL saved and verified after a page reload.
+- Google audience: External, Testing; one test user and no other users.
+- Google Publish app control: now enabled; no audience change was made.
+
+The saved privacy URL is `https://dbc00per1812.github.io/swarm/privacy.html`.
+The Google app name remains `Swarm MCP personal preview`. Terms remain empty.
+The production gateway remains version 15.
 
 ## Files and target
 
-The current-preview policy source is `web/privacy.html`. The public target is
+The current-preview policy source is `web/privacy.html`. The public address is
 `https://dbc00per1812.github.io/swarm/privacy.html`. The technical evidence is
 in `gmail-privacy-technical-check.md`. The operator procedure is in
 `gmail-privacy-operations.md`.
@@ -21,9 +40,10 @@ The archive is `swarm-privacy-preview-2026-10-16.zip` in the workspace's
 archive contains eight files. Only `index.html` and `privacy.html` differ from
 the live website. The existing application and callback bundles are unchanged.
 
-The package still displays its prepared status. Set its actual publication date
-during the authorized publication step. A dated local candidate is not an
-effective public policy.
+That earlier archive retains its prepared status as historical evidence. The
+published snapshot is `swarm-privacy-live-2026-10-16.zip` in the same directory.
+Its separate manifest records the deployed commit and file hashes. The live
+snapshot contains the effective publication date.
 
 ## Publication procedure
 
@@ -63,6 +83,6 @@ and Google's review remain separate Gmail release work. Publishing this notice
 does not resolve those conditions. Google's data-use requirements also apply
 during Testing.
 
-No source push, website publication, Google configuration change, credential
-rotation, production deletion, or public Gmail access change occurred during
-this preparation.
+This publication changed Pages and the Google privacy URL. It did not rotate
+credentials, delete production data, deploy gateway code, or expand public Gmail
+access.

@@ -6,9 +6,10 @@ production data was deleted. No credentials were rotated or printed.
 
 ## Publication result
 
-`web/privacy.html` describes the current preview, including its limits. It does
-not claim that the prepared Gmail search approval update is deployed. This file
-is the policy publication candidate for gateway version 15.
+`web/privacy.html` describes the current preview, including its limits. It was
+published on 2026-10-16 and its URL was saved in Google Branding. It does not
+claim that the prepared Gmail search approval update is deployed. See
+`gmail-privacy-publication.md` for the deployed commit and verification record.
 
 `gmail-privacy-draft.md` remains the candidate for the later approval release.
 Do not substitute it for the current-preview policy. Before deploying the
@@ -21,6 +22,10 @@ limits do not need invented retention deadlines. Publication of this notice does
 not establish Google verification or authorize public Gmail access.
 
 ## Verified production facts
+
+The following table records the initial technical inspection before publication.
+The later publication changed the privacy URL results and saved Google field.
+The gateway, database, and audience remained unchanged.
 
 | Check                                | Result                                         |
 | ------------------------------------ | ---------------------------------------------- |
@@ -166,3 +171,7 @@ The publication package preserves all original Pages files. Its only changes are
 the privacy page and the homepage privacy link. The Google verification file
 matches its required hash. See `gmail-privacy-publication.md` for the final
 publication procedure and its effective-date step.
+
+The later public check returned HTTP 200 for all eight released website files.
+Each response matched the deployment commit. Google confirmed the Branding save,
+and the exact privacy URL remained present after reloading the page.

@@ -1,10 +1,12 @@
 # Gmail public access preparation
 
-Update, 2026-10-16: the current-preview policy is prepared in
-`web/privacy.html`. The technical check and operating procedure are in
+Update, 2026-10-16: the current-preview policy is published, and its URL is
+saved in Google Branding. Pages commit:
+`9ac3a7cc74d68a38b0580b4d8eed3f3a4c339a77`. The production gateway remains
+version 15. The technical check and operating procedure are in
 `docs/integrations/gmail-privacy-technical-check.md` and
-`docs/integrations/gmail-privacy-operations.md`. Policy-only publication is
-separate from the future Gmail approval deployment and public-access release.
+`docs/integrations/gmail-privacy-operations.md`. Policy publication is separate
+from the future Gmail approval deployment and public-access release.
 
 Date: 2026-10-15, America/Chicago. Status: local implementation and submission
 material are prepared for review. Public Gmail access remains blocked.
@@ -18,12 +20,13 @@ shows one test user and no other users.
 
 A fresh authenticated console tab confirms the saved homepage
 `https://dbc00per1812.github.io/swarm/`. Authorized domains include
-`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. Privacy and
-terms links are empty. The app name remains `Swarm MCP personal preview`.
+`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
+link is saved as `https://dbc00per1812.github.io/swarm/privacy.html`. Terms
+remain empty. The app name remains `Swarm MCP personal preview`.
 
-Publish app is disabled. The console requires completed branding configuration.
-Verification Center offers no submission in the current Testing state. This
-continuation changed no Google settings or audience access.
+Publish app is enabled after the privacy link save. Verification Center offers
+no submission in the current Testing state. The publication changed only the
+Google privacy link; audience access remains unchanged.
 
 Search Console previously displayed Ownership verified for the GitHub Pages URL
 prefix. The exact 53-byte verification asset remains public and unchanged. This
@@ -155,6 +158,6 @@ not been verified.
 - Verify a new public Google account through the final production flow.
 
 No purchase, paid assessment, or assessor contract is authorized. The source
-branch remains local. No merge, website publication, gateway deployment,
-verification submission, or public-access expansion occurred in this
-continuation.
+branch remains local. The current-preview policy is published and saved in
+Google Branding. No merge, gateway deployment, verification submission, or
+public-access expansion occurred.

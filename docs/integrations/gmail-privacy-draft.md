@@ -1,7 +1,7 @@
 # Swarm privacy policy candidate
 
-This document targets the prepared Gmail approval release. The current-preview
-publication file is `web/privacy.html`. Its technical check and operating
+This document targets the prepared Gmail approval release. The published
+current-preview file is `web/privacy.html`. Its technical check and operating
 procedure are in `gmail-privacy-technical-check.md` and
 `gmail-privacy-operations.md`.
 

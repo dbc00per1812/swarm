@@ -1,10 +1,10 @@
 # Gmail public OAuth verification package
 
-Privacy check, 2026-10-16: `web/privacy.html` is the current-preview policy
-publication candidate. See `gmail-privacy-technical-check.md` for fresh
-production facts and `gmail-privacy-operations.md` for deletion and access
-procedures. The future approval-release candidate remains in
-`gmail-privacy-draft.md`.
+Privacy publication, 2026-10-16: `web/privacy.html` is public, and Google
+Branding stores its URL. The exact saved field persisted after reload. Google
+now enables Publish app; audience access remains External and Testing. See
+`gmail-privacy-publication.md` for the release record. The future
+approval-release candidate remains in `gmail-privacy-draft.md`.
 
 Research date: 2026-10-15, America/Chicago. Status: preparation only. Public
 Gmail access is not enabled or verified.
@@ -44,13 +44,14 @@ Testing.
 
 A fresh authenticated console tab now confirms the saved branding values. The
 homepage is `https://dbc00per1812.github.io/swarm/`. Authorized domains include
-`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. Privacy and
-terms links remain empty. The app name remains `Swarm MCP personal preview`.
+`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
+link is saved as `https://dbc00per1812.github.io/swarm/privacy.html`. Terms
+remain empty. The app name remains `Swarm MCP personal preview`.
 
 Audience still shows External and Testing, with one test user and no other
-users. Publish app is disabled. The console requires completed branding
-configuration. Verification Center offers no submission while this state
-remains. This continuation changed no Google settings.
+users. Publish app is enabled after the privacy link save. Verification Center
+offers no submission while this Testing state remains. The publication changed
+only the Google privacy link; no audience change was made.
 
 ## Integration contract
 
@@ -251,7 +252,7 @@ does not establish a recipient's retention, human-access, or training rules.
 | ------------------- | --------------------------------------------------------------------------------------- |
 | App name            | Keep `Swarm MCP personal preview` until an operator approves final branding             |
 | Homepage            | Saved: `https://dbc00per1812.github.io/swarm/`; OAuth domain acceptance remains pending |
-| Privacy URL         | `https://dbc00per1812.github.io/swarm/privacy.html`; proposed only, not published       |
+| Privacy URL         | `https://dbc00per1812.github.io/swarm/privacy.html`; published and saved in Google      |
 | Terms URL           | Optional; leave empty unless separately approved                                        |
 | Data Access         | Only `https://www.googleapis.com/auth/gmail.readonly`                                   |
 | Support contact     | Approved: `darragh.buckley1812@gmail.com`                                               |
