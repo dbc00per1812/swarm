@@ -1,15 +1,14 @@
 # Gmail public access preparation
 
-Update, 2026-10-16: the current-preview policy is published, and its URL is
-saved in Google Branding. Pages commit:
-`9ac3a7cc74d68a38b0580b4d8eed3f3a4c339a77`. The production gateway remains
-version 15. The technical check and operating procedure are in
-`docs/integrations/gmail-privacy-technical-check.md` and
-`docs/integrations/gmail-privacy-operations.md`. Policy publication is separate
-from the future Gmail approval deployment and public-access release.
+Update, 2026-10-16: Gmail search approval and the matching privacy policy are
+deployed. Gateway version 16 is active. Pages commit:
+`59c42a752a78194fbfd11690f68b8d1000a75e85`. Google Branding retains the
+published privacy URL. Google audience access remains External and Testing.
 
-Date: 2026-10-15, America/Chicago. Status: local implementation and submission
-material are prepared for review. Public Gmail access remains blocked.
+The deployment record is [gmail-approval.production.md](gmail-approval.production.md).
+The earlier policy audit remains in `docs/integrations/gmail-privacy-technical-check.md`.
+Operating procedures remain in `docs/integrations/gmail-privacy-operations.md`.
+Public Gmail access remains blocked pending the external release conditions.
 
 ## Google configuration
 
@@ -38,15 +37,14 @@ and public copies still match this hash and each other. The earlier Pages
 deployment used `gh-pages` commit `2777c372eac7d315465e0680808efe9b90626e2d`.
 Every future website deployment must preserve these bytes.
 
-## Local implementation
+## Deployed implementation
 
 Implementation commit: `8464df2`. The branch retains the four earlier
 preparation commits.
 
 The homepage now describes Swarm before sign-in. A separate Gmail disclosure
 dialog precedes Google authorization. Cancel and Escape stop the flow and
-restore focus. The technical data-use page describes the local release
-candidate.
+restore focus. The technical data-use page describes the deployed release.
 
 Each Gmail search now requires approval on the signed-in Swarm website. The
 review shows the mailbox, query, result limit, and requesting key fingerprint. A
@@ -60,8 +58,8 @@ search or token-refresh endpoint before approval.
 
 Disabled tools, revoked keys, changed connections, expired or used approvals,
 and withdrawn team access fail closed. Current permissions are checked again
-before each Gmail message request. Existing keys retain their identities. After
-deployment, their Gmail searches will require this additional approval.
+before each Gmail message request. Existing keys retain their identities.
+Their Gmail searches now require this additional approval.
 
 Pending query data uses the existing AES-GCM protection with a separate approval
 context. Use or denial clears its ciphertext. During later approval activity,
@@ -72,20 +70,21 @@ removal deletes its approval records.
 
 The additive migration is `20261016020000_gmail_approvals.sql`. It enables row
 security and restricts access to the server role. It includes indexes for
-connection and key deletion. The migration remains absent from production.
+connection and key deletion. It is installed in production as migration version
+`20261016234731`, named `gmail_approvals`.
 
 ## Policy and submission material
 
-The policy candidate is `docs/integrations/gmail-privacy-draft.md`. It covers
+The published policy is `web/privacy.html`. It covers
 account data, browser storage, native and custom tools, Gmail approval, sharing,
-retention, deletion limits, and selected Limited Use commitments. It is not
-published or effective. The confirmed public operator name is Darragh Buckley
-1812. The approved support and privacy contact is recorded in the candidate.
+retention, deletion limits, and selected Limited Use commitments. It is effective
+16 October 2026. The public operator name is Darragh Buckley 1812.
+The approved support and privacy contact appears in the policy.
 
-The candidate now selects data-use restrictions, human-access rules, deletion
-handling, and operator duties. No further wording approval is needed for those
-rules. Supporting procedures, retention facts, recipient controls, and matching
-production behavior still require verification before publication.
+The policy selects data-use restrictions, human-access rules, deletion handling,
+and operator duties. The deployed approval behavior and active-record deletion
+checks passed. Recipient practices, historical copies, and the open credential
+incident remain public release conditions. The policy discloses these limits.
 
 The concrete Google fields, scope justification, demonstration requirements, and
 deployment order are in `docs/integrations/gmail-google-submission.md`. Service
@@ -127,8 +126,10 @@ is a disposable local PostgreSQL instance. It does not change production.
 
 Read-only checks found five connections, two active keys, two pending OAuth
 states, and four retained legacy credential rows. Organizations, memberships,
-and shares remain empty. This continuation made no production database writes.
-It did not remove unexplained records or rotate working credentials.
+and shares remained empty during the initial audit. The later deployment added
+the approval migration and used disposable hosted fixtures. Those fixtures were
+removed. Existing connections, keys, and legacy credential rows were preserved.
+No working credentials were rotated.
 
 The project remains `ACTIVE_HEALTHY` in `us-east-1`. The organization plan is
 Free. Supabase's published plan lists one day for API/database logs and one hour
@@ -150,14 +151,13 @@ not been verified.
 - Establish supported recipient practices and historical-data deletion
   procedures.
 - Resolve the open credential incident without losing existing service access.
-- Approve and publish the reviewed implementation and final privacy policy.
 - Confirm Google's acceptance of hosted-domain ownership evidence.
 - Configure separate test and production environments for final verification.
 - Capture the real OAuth and Gmail demonstration with synthetic mail.
 - Complete Google's restricted-scope review and required security assessment.
 - Verify a new public Google account through the final production flow.
 
-No purchase, paid assessment, or assessor contract is authorized. The source
-branch remains local. The current-preview policy is published and saved in
-Google Branding. No merge, gateway deployment, verification submission, or
-public-access expansion occurred.
+No purchase, paid assessment, or assessor contract is authorized. Approval code
+and the matching policy are deployed. Google verification submission and public
+access expansion remain pending. See the deployment record for the source review
+and real-mailbox check status.

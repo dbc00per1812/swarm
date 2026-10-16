@@ -4,10 +4,10 @@ Prepared: 2026-10-15, America/Chicago. Status: not submitted. This file contains
 reviewable field values and evidence requirements. It does not authorize
 publication, a purchase, or an assessment contract.
 
-Update, 2026-10-16: `web/privacy.html` is published for the current preview. Its
-URL is saved in Google Branding and persisted after reload. The release record
-is in `gmail-privacy-publication.md`. The later approval-release policy remains
-in `gmail-privacy-draft.md`. Gmail audience access remains External and Testing.
+Update, 2026-10-16: approval controls and `web/privacy.html` are deployed.
+Gateway version 16 is active. The privacy URL remains saved in Google Branding.
+See `../../plans/gmail-approval.production.md` for the deployment and check record.
+Gmail audience access remains External and Testing. This package is not submitted.
 
 ## Console fields
 
@@ -52,10 +52,10 @@ Swarm also reads the connected account's Gmail address through
 refresh tokens remain encrypted on the Swarm server. Tool recipients do not
 receive these credentials.
 
-The local release candidate requires a separate website confirmation for each
-search. That confirmation binds the exact mailbox, query, limit, and requesting
-agent key. It permits one attempt within ten minutes. The control must be
-deployed and demonstrated before this paragraph describes production.
+The deployed gateway requires a separate website confirmation for each search.
+That confirmation binds the exact mailbox, query, limit, and requesting agent
+key. It permits one attempt within ten minutes. Hosted synthetic checks passed.
+The real OAuth demonstration remains required for submission.
 
 References:
 [message-list API](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list)
@@ -72,16 +72,16 @@ sending, or mailbox modification through this tool.
 
 ## Privacy and Limited Use material
 
-The factual candidate is in `gmail-privacy-draft.md`. It identifies active and
+The published policy is `web/privacy.html`. It identifies active and
 legacy storage, browser state, agent transfers, team access, approval records,
 and known deletion limits. The confirmed public operator name is Darragh Buckley
 1812. The support and privacy address is approved.
 
-The candidate records selected Limited Use rules and operator duties. No further
-wording approval is needed for those rules. Before publication, verify the
-supporting procedures, retention facts, recipient controls, and deployed
-behavior. Encryption alone does not establish compliance. Do not promise that
-connection removal erases all copies or revokes Google's grant.
+The policy records selected Limited Use rules and operator duties. Approval
+behavior and active-record deletion checks passed. Recipient controls and
+historical-copy handling remain unresolved public release conditions. Encryption
+alone does not establish compliance. Connection removal does not revoke Google's
+grant or prove deletion of every copy.
 
 ## Demonstration record
 
@@ -105,6 +105,11 @@ Google requires an end-to-end demonstration. See its
 [verification requirements](https://support.google.com/cloud/answer/13464321?hl=en).
 
 ## Review and deployment order
+
+Deployment steps 3–8 are complete for the existing Testing audience, except the
+real approved Gmail retrieval check. The deployment record tracks that check.
+Steps 1–2 retain unresolved operating conditions. Steps 9–13 remain submission
+and public release work. Do not reapply the installed migration.
 
 1. Verify that operations support the selected policy commitments.
 2. Resolve recipient controls, retention procedures, and the open credential

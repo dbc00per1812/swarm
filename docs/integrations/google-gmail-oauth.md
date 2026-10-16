@@ -3,8 +3,8 @@
 Privacy publication, 2026-10-16: `web/privacy.html` is public, and Google
 Branding stores its URL. The exact saved field persisted after reload. Google
 now enables Publish app; audience access remains External and Testing. See
-`gmail-privacy-publication.md` for the release record. The future
-approval-release candidate remains in `gmail-privacy-draft.md`.
+`gmail-privacy-publication.md` for the initial release record. The approval
+release is recorded in `../../plans/gmail-approval.production.md`.
 
 Research date: 2026-10-15, America/Chicago. Status: preparation only. Public
 Gmail access is not enabled or verified.
@@ -14,9 +14,9 @@ official sources. The original eleven additions succeeded. Seven client and
 hosting references were added successfully during the continuation. Queries
 returned citations. The API reference corrected an initial scope recommendation.
 
-Source descriptions below include the local approval implementation. Production
-still uses gateway version 15. The approval migration and interface are not
-published.
+Gateway version 16 now includes search approval. The additive approval migration,
+website, and matching privacy policy are deployed. Hosted synthetic checks pass.
+Google public access remains unverified.
 
 ## Current Google configuration
 
@@ -155,14 +155,15 @@ Management API confirms the project's organization plan is Free. Its
 [published plan](https://supabase.com/pricing) lists one day for API/database
 logs and one hour for Auth audit logs. These limits do not prove deletion of
 every operational copy or historical export. No `pg_cron` extension is
-installed. The approval table is absent in production.
+installed at the initial audit. The later release installed the approval table
+as migration version `20261016234731`.
 
-The local approval function clears encrypted query data after use or denial.
+The deployed approval function clears encrypted query data after use or denial.
 Expired requests cannot execute. During approval activity, Swarm clears expired
 query data that is available for cleanup. Locked records can require later
 activity. Without activity, ciphertext can remain. Decision identifiers and
 hashes have no automatic expiry. Connection removal deletes its approval
-records. The policy candidate discloses these limits.
+records. The published policy discloses these limits.
 
 ## Public release requirements
 
@@ -211,8 +212,8 @@ It requires prominent disclosure, affirmative consent, and granular confirmation
 of agentic invocation. It also limits transfers and prohibits general model
 training with Workspace data. See the
 [Workspace data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy).
-Production version 15 has no Swarm confirmation for each call. The local source
-now requires signed-in website approval before every Gmail search. Approval
+Production version 16 requires signed-in website approval before every Gmail
+search. Approval
 binds the user, mailbox, connection revision, exact query, result limit, and
 agent key. It permits one attempt within ten minutes. The database consumes
 approval atomically. Disabled tools, changed connections, revoked keys, expired
@@ -223,9 +224,9 @@ stop that flow. The website also explains Swarm publicly before sign-in.
 
 The control does not depend on a client claiming that the user approved. Browser
 tests, gateway tests, isolated PostgreSQL tests, and a synthetic browser walk
-passed. These results do not prove Google's acceptance or final production
-behavior. The implementation remains subject to review and release approval.
-Recipient data-use controls remain a public release condition.
+passed. Hosted synthetic approval checks also passed after deployment. These
+results do not prove Google's acceptance. Recipient data-use controls remain a
+public release condition.
 
 ## Client confirmation investigation
 
@@ -234,7 +235,7 @@ Recipient data-use controls remain a public release condition.
 | OpenAI Responses MCP | `require_approval` can require approval; configuration can also bypass it                        | No existing Swarm client deployment was certified                     |
 | Claude Code          | `_meta["anthropic/requiresUserInteraction"]: true` requires a human prompt in supported versions | Vendor-specific metadata does not establish behavior in other clients |
 | MCP URL elicitation  | Optional client support can direct a user to a separate secure page                              | Support cannot be assumed for an arbitrary client                     |
-| Local Swarm change   | Server requires website approval regardless of client approval settings                          | Synthetic verification passed; production deployment remains pending  |
+| Deployed Swarm control | Server requires website approval regardless of client approval settings                        | Version 16 deployed; hosted synthetic checks passed                    |
 
 Sources:
 [OpenAI MCP documentation](https://developers.openai.com/api/docs/guides/tools-connectors-mcp),
@@ -339,8 +340,8 @@ still require confirmation.
 - Whether Gmail tool sharing with organizations remains part of the public
   product.
 
-The policy candidate is in `gmail-privacy-draft.md`. Concrete submission fields
-and deployment checks are in `gmail-google-submission.md`. Terms remain an
-optional operator drafting decision. No public policy, OAuth verification
-submission, domain purchase, assessment, or OAuth production-status change is
-claimed.
+The published policy is `web/privacy.html`. Concrete submission fields and
+checks are in `gmail-google-submission.md`. Terms remain an optional operator
+drafting decision. Policy publication and approval deployment are complete.
+OAuth verification submission, an assessment, and a Google production-status
+change remain pending. No domain purchase is planned or authorized.

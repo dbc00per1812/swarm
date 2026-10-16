@@ -1,15 +1,13 @@
-# Swarm privacy policy candidate
+# Swarm privacy policy preparation archive
 
-This document targets the prepared Gmail approval release. The published
-current-preview file is `web/privacy.html`. Its technical check and operating
-procedure are in `gmail-privacy-technical-check.md` and
-`gmail-privacy-operations.md`.
+Superseded, 2026-10-16: the approved policy is published in `web/privacy.html`.
+It is effective 16 October 2026 and describes deployed gateway version 16.
+See `../../plans/gmail-approval.production.md` for the release record.
 
-Review date: 2026-10-16, America/Chicago. Status: operating rules selected;
-supporting procedures and controls remain unverified. This candidate is not
-published or effective. It describes the proposed release, including the local
-Gmail approval changes. At the last production inspection, gateway version 15
-did not include those changes.
+The following preparation text preserves earlier audit assumptions and proposed
+wording. It is not the current policy. Earlier statements about version 15 or
+an absent approval table describe the initial audit only. The public policy
+discloses the remaining historical-copy and recipient-control limits.
 
 ## Publication conditions
 

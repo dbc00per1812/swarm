@@ -1,5 +1,10 @@
 # Swarm privacy technical check
 
+Historical record: this file describes the initial policy-only publication and
+version 15 audit. The later approval release supersedes its current-state claims.
+See [the approval deployment record](../../plans/gmail-approval.production.md)
+for gateway version 16, the installed migration, and the updated public policy.
+
 Checked: 2026-10-16, America/Chicago. Scope: read-only production inspection,
 deployed-source comparison, isolated deletion checks, and policy preparation. No
 production data was deleted. No credentials were rotated or printed.
