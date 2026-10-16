@@ -11,6 +11,7 @@ publication, a purchase, or an assessment contract.
 | Project              | `swarm-mcp`, number `441732284617`                                         |
 | Current app name     | `Swarm MCP personal preview`                                               |
 | Proposed name change | None in this continuation; final branding requires operator approval       |
+| Public operator      | Darragh Buckley 1812                                                       |
 | User support email   | `darragh.buckley1812@gmail.com`                                            |
 | Homepage             | `https://dbc00per1812.github.io/swarm/`                                    |
 | Homepage state       | Saved and visible in a fresh authenticated console tab                     |
@@ -68,8 +69,8 @@ sending, or mailbox modification through this tool.
 
 The factual candidate is in `gmail-privacy-draft.md`. It identifies active and
 legacy storage, browser state, agent transfers, team access, approval records,
-and known deletion limits. The public operator identity remains unconfirmed. The
-support and privacy address is approved.
+and known deletion limits. The confirmed public operator name is Darragh Buckley
+1812. The support and privacy address is approved.
 
 Before publication, confirm the proposed Limited Use commitments and recipient
 controls. Do not replace that confirmation with a statement that encryption
@@ -99,7 +100,7 @@ Google requires an end-to-end demonstration. See its
 
 ## Review and deployment order
 
-1. Confirm the operator identity and policy commitments.
+1. Confirm the policy commitments.
 2. Resolve recipient controls, retention procedures, and the open credential
    incident.
 3. Approve the reviewed source and deployment target.

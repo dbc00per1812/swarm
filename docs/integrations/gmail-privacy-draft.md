@@ -7,9 +7,9 @@ version 15 without those changes.
 
 ## Publication conditions
 
-Confirm the public operator identity before publication. The approved public
-support and privacy address is `darragh.buckley1812@gmail.com`. This approval
-does not identify a registered business or establish a legal entity.
+The confirmed public operator name is Darragh Buckley 1812. The approved public
+support and privacy address is `darragh.buckley1812@gmail.com`. These
+confirmations do not establish a registered business or legal entity.
 
 Confirm the operational commitments in the Limited Use section. Confirm hosting
 log retention, historical backup handling, access procedures, and legacy-copy
@@ -23,9 +23,10 @@ third-party agent compliance, or a fixed support response time.
 
 ### Operator and contact
 
-Swarm connects selected account tools to agents. For support, privacy questions,
-or deletion requests, contact `darragh.buckley1812@gmail.com`. The final policy
-must identify the responsible operator and its effective date.
+Swarm is operated by Darragh Buckley 1812. Swarm connects selected account tools
+to agents. For support, privacy questions, or deletion requests, contact
+`darragh.buckley1812@gmail.com`. The final policy must include its effective
+date.
 
 ### Account data and browser storage
 

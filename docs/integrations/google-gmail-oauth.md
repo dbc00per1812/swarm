@@ -300,7 +300,7 @@ provider write deduplication do not apply. The API path uses Gmail v1. No
 separate deprecation-header monitor is configured. The callback uses HTTP 303.
 Browser messaging uses exact origins.
 
-UNKNOWN-BLOCKING: name the operator who handles Google notices, policy changes,
+UNKNOWN-BLOCKING: confirm responsibility for Google notices, policy changes,
 incidents, and credential rotation. Before public release, assign monthly policy
 review and verification-expiry reminders to that operator. No recurring
 automation was created. This task did not authorize a schedule.
@@ -316,7 +316,10 @@ zero-cost fallback. It does not meet public connection acceptance.
 
 ## Required operator facts
 
-- Public operator or business name. The support and privacy address is approved.
+The confirmed public operator name is Darragh Buckley 1812. The approved support
+and privacy address is `darragh.buckley1812@gmail.com`. The following facts
+still require confirmation.
+
 - Accepted ownership-verification method for the existing hosted addresses, or
   an owned domain if Google requires one.
 - Infrastructure logs, backup retention, and complete deletion process.
