@@ -1,5 +1,11 @@
 # Gmail public OAuth verification package
 
+Privacy check, 2026-10-16: `web/privacy.html` is the current-preview policy
+publication candidate. See `gmail-privacy-technical-check.md` for fresh
+production facts and `gmail-privacy-operations.md` for deletion and access
+procedures. The future approval-release candidate remains in
+`gmail-privacy-draft.md`.
+
 Research date: 2026-10-15, America/Chicago. Status: preparation only. Public
 Gmail access is not enabled or verified.
 

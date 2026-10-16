@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="no-referrer">
+    <meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'none'; style-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+    <meta name="description"
+      content="How Swarm handles account information, service credentials, tool results, and deletion requests.">
+    <title>Privacy policy — Swarm</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <header><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> SWARM</a><span class="tag">CONNECTIONS BETA</span></header>
+    <main id="main">
+      <p class="eyebrow">YOUR DATA</p>
+      <h1>Privacy policy</h1>
+      <p
+        id="publication-status">Publication status: prepared, not yet effective.</p>
+      <p>Prepared: <time datetime="2026-10-16">16 October 2026</time>.</p>
+      <p
+        class="intro">This policy describes Swarm's current preview. Gmail connections remain limited to approved Google test users.</p>
+      <nav aria-label="Privacy policy sections">
+        <a href="#operator">Operator</a> · <a href="#data">Data</a> · <a href="#gmail">Gmail</a> · <a href="#recipients">Recipients</a> · <a href="#retention">Retention</a> · <a href="#choices">Your choices</a>
+      </nav>
+      <section class="service" aria-labelledby="operator">
+        <h2 id="operator">Operator and contact</h2>
+        <p>Swarm is operated by Darragh Buckley 1812. Swarm connects selected account tools to agents.</p>
+        <p>For support, privacy questions, or deletion requests, contact <a href="mailto:darragh.buckley1812@gmail.com">darragh.buckley1812@gmail.com</a>.</p>
+        <p>If you contact support, we receive your address and message. We use this information to handle your request.</p>
+        <p>Support correspondence is stored separately in the support mailbox. You can request its deletion through the same address.</p>
+      </section>
+      <section class="service" aria-labelledby="data">
+        <h2 id="data">Account and connection data</h2>
+        <p>Swarm uses Supabase for authentication. GitHub sign-in supplies account information, such as your email address and GitHub profile information.</p>
+        <p>The authentication service stores account identifiers, authentication records, and session information. Existing email accounts can also sign in.</p>
+        <p>Swarm stores connection names, service account labels, ownership identifiers, settings, tool descriptions, and enabled tool permissions.</p>
+        <p>Custom server connections also store the server address, discovered tool schemas, and any saved authentication credential.</p>
+        <p>Swarm encrypts saved service credentials. Access tokens permit service requests. Refresh tokens can obtain replacement access tokens after expiry.</p>
+        <p>Organization features store names, member identifiers, invitation records, selected tool shares, and audit records of organization changes.</p>
+      </section>
+      <section class="service" aria-labelledby="browser">
+        <h2 id="browser">Browser storage</h2>
+        <p>Your browser stores the Swarm sign-in session and remembered agent key identifiers.</p>
+        <p>Temporary browser storage holds pending invitations and authorization proof. The current preview does not store Gmail search queries or results in browser storage.</p>
+        <p>Raw agent keys appear when created. Swarm does not save raw agent keys in browser storage.</p>
+        <p>You can copy a key or save an agent configuration file. You control copies that you save or give to agents.</p>
+        <p>Sign out on shared devices. Browser controls can remove stored website data.</p>
+      </section>
+      <section class="service" aria-labelledby="gmail">
+        <h2 id="gmail">Gmail data and search</h2>
+        <p>Google grants Swarm read access to Gmail messages and settings. Swarm uses this access for its mailbox search feature.</p>
+        <p>Swarm sends your search query to Google. It returns message IDs, thread IDs, and the Subject, From, and Date headers.</p>
+        <p>The current tool does not fetch message bodies or attachments. It does not modify mail.</p>
+        <p>Swarm reads your Gmail address to identify the connected account. It stores that address as the account label.</p>
+        <p>Gmail authorization is separate from Swarm account sign-in. You can cancel Google's authorization screen.</p>
+        <p>Gmail connections currently use Google's Testing status. Only approved test users can connect. Test authorization can expire after seven days.</p>
+        <p>The current preview does not require separate website approval for each search. Agents with an authorized key can request enabled tools.</p>
+        <p>Swarm has prepared a separate search approval update. This policy does not describe that update as active.</p>
+      </section>
+      <section class="service" aria-labelledby="other-tools">
+        <h2 id="other-tools">Other tools</h2>
+        <p>GitHub tools return pull request numbers, titles, links, and states from selected public repositories.</p>
+        <p>Slack search returns message text, times, links, and channel names available to the connected account.</p>
+        <p>Linear tools return issue identifiers, titles, links, and states.</p>
+        <p>These native tools read data. Custom server tools can have other effects, including changes to data.</p>
+        <p>A custom server receives the selected tool arguments through Swarm. Swarm returns its results to the requesting agent.</p>
+        <p>The custom server's data handling depends on the server you connect.</p>
+      </section>
+      <section class="service" aria-labelledby="recipients">
+        <h2 id="recipients">Recipients and organization sharing</h2>
+        <p>Supabase hosts Swarm's gateway, database, and authentication service. The database is hosted in the United States.</p>
+        <p>GitHub Pages hosts the website. Google, GitHub, Slack, Linear, and selected custom servers process their respective connection requests.</p>
+        <p>Swarm sends tool results to the requesting agent. Anyone holding your agent key can request tools available to that key.</p>
+        <p>If you share a tool with an organization, members' agents can request it through their own keys.</p>
+        <p>Sharing Gmail tool access permits mailbox searches. It does not restrict access to selected messages.</p>
+        <p>Swarm's connection-management API does not provide your saved service credentials to organization members.</p>
+        <p>Swarm does not identify or verify the agent provider from an agent key. Provider storage, human access, and training settings can differ.</p>
+        <p>Use Gmail only with an agent whose data handling meets Google's applicable rules. Do not provide Gmail access for prohibited uses.</p>
+        <p>Removing access in Swarm does not erase results already received by an agent. Contact that provider about its copies.</p>
+      </section>
+      <section class="service" aria-labelledby="limited-use">
+        <h2 id="limited-use">Google data-use commitments</h2>
+        <p>Swarm commits to follow the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+        <p>Swarm also commits to follow the <a href="https://developers.google.com/workspace/workspace-api-user-data-developer-policy">Google Workspace data policy</a>.</p>
+        <p>Swarm will use Google data only for the disclosed mailbox search feature. Swarm will not sell Google data.</p>
+        <p>Swarm will not use Google data for advertising, credit decisions, or general model training.</p>
+        <p>Transfers are restricted to permitted features with user consent, security needs, legal requirements, or an eligible business transfer with prior consent.</p>
+        <p>Human access requires documented consent for specific data, a permitted security purpose, a legal requirement, or permitted aggregated and anonymized internal use.</p>
+        <p>Staff, contractors, agents, and successors must follow these restrictions. These commitments do not certify an agent provider's practices.</p>
+        <p>Google verification and checks of recipient practices remain incomplete. This policy does not announce public Gmail availability.</p>
+      </section>
+      <section class="service" aria-labelledby="retention">
+        <h2 id="retention">Retention and deletion limits</h2>
+        <p>Swarm keeps active account and connection records until removal or replacement. The Gmail tool processes search results for each request.</p>
+        <p>The Gmail tool's application code does not write message headers or search results to the database.</p>
+        <p>Removing a connection deletes its active credentials, pending user authorization records, and organization shares.</p>
+        <p>Earlier imported credential copies and account labels remain separate from active connections. Removing the active connection does not delete these historical copies.</p>
+        <p>Legacy authorization records can also remain after connection or account deletion. These records require separate operator handling.</p>
+        <p>Historical credential copies and the import marker have no automatic expiry. They require separate operator handling.</p>
+        <p>Team audit records retain identifiers after account, connection, or organization deletion. They have no automatic expiry.</p>
+        <p>Revoking an agent key prevents its future use. Its hash and revocation record remain until account deletion or separate operator handling.</p>
+        <p>Expired user authorization records cannot complete authorization. They can remain until later cleanup or connection removal.</p>
+        <p>For account or historical-data deletion, contact the privacy address. We will verify account control and check the relevant records.</p>
+        <p>We will report the deletion result and identify any known retained copies or retention reasons.</p>
+        <p>Account deletion removes active connections, agent keys, memberships, and owned organizations. Some historical and audit records need separate handling.</p>
+      </section>
+      <section class="service" aria-labelledby="hosting-logs">
+        <h2 id="hosting-logs">Hosting logs and backups</h2>
+        <p>Hosting providers process technical information, such as IP addresses, request times, addresses requested, response status, and authentication events.</p>
+        <p>GitHub records website visitors' IP addresses for security purposes. See <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages#data-collection">GitHub Pages data collection</a>.</p>
+        <p>The inspected Swarm application source contains no advertising or analytics SDK. Hosting providers operate their own logging systems.</p>
+        <p>Swarm currently uses Supabase's Free plan. Its published limits list one day for API and database logs and one hour for Auth audit logs.</p>
+        <p>These plan limits do not prove deletion from every logging system or database. See <a href="https://supabase.com/pricing">Supabase's plan details</a>.</p>
+        <p>The backup inspection on 16 October 2026 listed no available database backups. Point-in-time recovery was disabled.</p>
+        <p>That inspection does not establish whether historical or manual copies exist. Swarm does not promise a fixed deletion period for unknown copies.</p>
+        <p>Hosting logs, support correspondence, and historical copies require separate handling when relevant to a deletion request.</p>
+      </section>
+      <section class="service" aria-labelledby="choices">
+        <h2 id="choices">Your choices and access removal</h2>
+        <ol>
+          <li>To stop a tool, clear its selection and select Save tools.</li>
+          <li>To stop organization access, withdraw the tool share.</li>
+          <li>To remove an active connection, select Remove on its account card.</li>
+          <li>To stop an agent key, select Revoke key.</li>
+          <li>To revoke Google's grant, remove Swarm from your <a href="https://myaccount.google.com/connections">Google Account connections</a>.</li>
+          <li>To request account or historical-data deletion, contact the privacy address.</li>
+        </ol>
+        <p>Removing a connection in Swarm does not revoke the provider's authorization grant.</p>
+        <p>Do not include passwords, tokens, or mailbox content in a privacy request. We will request only information needed to verify account control.</p>
+        <p>You can ask about your data or request correction through the privacy address.</p>
+      </section>
+      <section class="service" aria-labelledby="security">
+        <h2 id="security">Access controls and security</h2>
+        <p>Swarm checks connection ownership and shared tool permissions on its server. It checks Gmail access before Gmail requests.</p>
+        <p>Swarm encrypts saved service credentials and uses HTTPS for public connections.</p>
+        <p>Authorized operators can administer the hosting project and database. Human access to Google data must follow the restrictions above.</p>
+        <p>These controls do not establish a security certification or eliminate all security risks.</p>
+      </section>
+      <section class="service" aria-labelledby="changes">
+        <h2 id="changes">Policy changes</h2>
+        <p>We will update this policy when Swarm's data handling changes. Material changes will be identified with the updated publication date.</p>
+        <p>New Google data uses will require updated disclosure and consent before those uses begin.</p>
+      </section>
+      <p><a href="./">Return to Swarm</a></p>
+    </main>
+    <footer>Swarm privacy policy. Prepared for the current preview.</footer>
+  </body>
+</html>

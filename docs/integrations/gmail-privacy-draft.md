@@ -1,5 +1,10 @@
 # Swarm privacy policy candidate
 
+This document targets the prepared Gmail approval release. The current-preview
+publication file is `web/privacy.html`. Its technical check and operating
+procedure are in `gmail-privacy-technical-check.md` and
+`gmail-privacy-operations.md`.
+
 Review date: 2026-10-16, America/Chicago. Status: operating rules selected;
 supporting procedures and controls remain unverified. This candidate is not
 published or effective. It describes the proposed release, including the local

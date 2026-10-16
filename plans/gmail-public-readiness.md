@@ -1,5 +1,11 @@
 # Gmail public access preparation
 
+Update, 2026-10-16: the current-preview policy is prepared in
+`web/privacy.html`. The technical check and operating procedure are in
+`docs/integrations/gmail-privacy-technical-check.md` and
+`docs/integrations/gmail-privacy-operations.md`. Policy-only publication is
+separate from the future Gmail approval deployment and public-access release.
+
 Date: 2026-10-15, America/Chicago. Status: local implementation and submission
 material are prepared for review. Public Gmail access remains blocked.
 

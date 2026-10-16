@@ -4,6 +4,13 @@ Prepared: 2026-10-15, America/Chicago. Status: not submitted. This file contains
 reviewable field values and evidence requirements. It does not authorize
 publication, a purchase, or an assessment contract.
 
+Update, 2026-10-16: `web/privacy.html` now contains the current-preview policy
+publication candidate. The policy-only publication procedure is in
+`gmail-privacy-publication.md`. The later approval-release policy remains in
+`gmail-privacy-draft.md`. The public privacy and Gmail notice URLs still
+returned HTTP 404 during the technical check. Google Branding still has no saved
+privacy URL.
+
 ## Console fields
 
 | Field                | Exact value or current condition                                           |
@@ -16,7 +23,7 @@ publication, a purchase, or an assessment contract.
 | Homepage             | `https://dbc00per1812.github.io/swarm/`                                    |
 | Homepage state       | Saved and visible in a fresh authenticated console tab                     |
 | Privacy policy URL   | Proposed: `https://dbc00per1812.github.io/swarm/privacy.html`              |
-| Privacy policy state | Candidate only; no public policy file exists at that URL                   |
+| Privacy policy state | Local HTML candidate exists; public URL still returns HTTP 404             |
 | Terms URL            | Leave empty unless separately approved; terms are optional                 |
 | Authorized domains   | Saved: `dbc00per1812.github.io`, `xatpcwatmcpjznhwgpit.supabase.co`        |
 | Callback             | `https://xatpcwatmcpjznhwgpit.supabase.co/functions/v1/mcp/callback/gmail` |
