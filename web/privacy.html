@@ -43,7 +43,7 @@
       <section class="service" aria-labelledby="browser">
         <h2 id="browser">Browser storage</h2>
         <p>Your browser stores the Swarm sign-in session and remembered agent key identifiers.</p>
-        <p>Temporary browser storage holds pending invitations and authorization proof. The current preview does not store Gmail search queries or results in browser storage.</p>
+        <p>Temporary browser storage holds pending invitations, authorization proof, and Gmail approval identifiers. The current preview does not store Gmail search queries or results in browser storage.</p>
         <p>Raw agent keys appear when created. Swarm does not save raw agent keys in browser storage.</p>
         <p>You can copy a key or save an agent configuration file. You control copies that you save or give to agents.</p>
         <p>Sign out on shared devices. Browser controls can remove stored website data.</p>
@@ -56,8 +56,12 @@
         <p>Swarm reads your Gmail address to identify the connected account. It stores that address as the account label.</p>
         <p>Gmail authorization is separate from Swarm account sign-in. You can cancel Google's authorization screen.</p>
         <p>Gmail connections currently use Google's Testing status. Only approved test users can connect. Test authorization can expire after seven days.</p>
-        <p>The current preview does not require separate website approval for each search. Agents with an authorized key can request enabled tools.</p>
-        <p>Swarm has prepared a separate search approval update. This policy does not describe that update as active.</p>
+        <p>Each Gmail search requires approval on the signed-in Swarm website. Agent keys cannot approve searches.</p>
+        <p>The review shows the mailbox, exact query, result limit, and requesting key fingerprint. A fingerprint is a short identifier for the key.</p>
+        <p>Approval permits one attempt for that request and key. It expires ten minutes after the request starts.</p>
+        <p>A changed query, connection, result limit, or key needs another approval. A failed attempt also needs another approval.</p>
+        <p>You can deny a search instead. Before approval, the server does not search Gmail or refresh its Gmail token.</p>
+        <p>The approval page requires confirmation of permitted agent data use. This confirmation does not verify the agent provider's identity or practices.</p>
       </section>
       <section class="service" aria-labelledby="other-tools">
         <h2 id="other-tools">Other tools</h2>
@@ -95,6 +99,11 @@
         <h2 id="retention">Retention and deletion limits</h2>
         <p>Swarm keeps active account and connection records until removal or replacement. The Gmail tool processes search results for each request.</p>
         <p>The Gmail tool's application code does not write message headers or search results to the database.</p>
+        <p>Pending Gmail approvals store an encrypted query and result limit. Approval records also contain account, connection, key, and request identifiers.</p>
+        <p>The server clears encrypted query data after use or denial. Expired approvals cannot execute.</p>
+        <p>During later approval activity, Swarm clears expired query data that is available for cleanup. Locked records can require later activity.</p>
+        <p>Without later activity, expired encrypted query data can remain. Approval hashes, identifiers, and decision times have no automatic expiry.</p>
+        <p>Removing a connection deletes its Gmail approval records.</p>
         <p>Removing a connection deletes its active credentials, pending user authorization records, and organization shares.</p>
         <p>Earlier imported credential copies and account labels remain separate from active connections. Removing the active connection does not delete these historical copies.</p>
         <p>Legacy authorization records can also remain after connection or account deletion. These records require separate operator handling.</p>
