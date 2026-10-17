@@ -18,6 +18,10 @@ Gateway version 16 now includes search approval. The additive approval migration
 website, and matching privacy policy are deployed. Hosted synthetic checks pass.
 Google public access remains unverified.
 
+The latest console and DNS findings are in
+[gmail-verification-progress.md](gmail-verification-progress.md). That record
+supersedes earlier assumptions about URL-prefix verification for OAuth.
+
 ## Current Google configuration
 
 The authenticated Cloud console showed these settings at the initial inspection:
@@ -46,7 +50,8 @@ A fresh authenticated console tab now confirms the saved branding values. The
 homepage is `https://dbc00per1812.github.io/swarm/`. Authorized domains include
 `dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
 link is saved as `https://dbc00per1812.github.io/swarm/privacy.html`. Terms
-remain empty. The app name remains `Swarm MCP personal preview`.
+remain empty. The later saved public app name is `Swarm`. The name persisted
+after a fresh console reload. The OAuth client retains its internal preview label.
 
 Audience still shows External and Testing, with one test user and no other
 users. Publish app is enabled after the privacy link save. Verification Center

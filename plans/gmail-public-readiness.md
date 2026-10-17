@@ -21,15 +21,18 @@ A fresh authenticated console tab confirms the saved homepage
 `https://dbc00per1812.github.io/swarm/`. Authorized domains include
 `dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
 link is saved as `https://dbc00per1812.github.io/swarm/privacy.html`. Terms
-remain empty. The app name remains `Swarm MCP personal preview`.
+remain empty. The public app name is now `Swarm`; the save persisted after reload.
 
 Publish app is enabled after the privacy link save. Verification Center offers
 no submission in the current Testing state. The publication changed only the
-Google privacy link; audience access remains unchanged.
+Google privacy link. A later continuation saved the public name as `Swarm`.
+Audience access remains unchanged.
 
 Search Console previously displayed Ownership verified for the GitHub Pages URL
 prefix. The exact 53-byte verification asset remains public and unchanged. This
-result does not establish OAuth acceptance of either hosted domain.
+result does not establish OAuth acceptance of either hosted domain. Google's
+current guide requires a DNS Domain property. The personal Swarm domain remains
+an operator input. See `docs/integrations/gmail-verification-progress.md`.
 
 The verification file is `web/googledfccf295f08c8741.html`. Its SHA-256 is
 `ccf1d7244c93cffcbabcb43e6c218c1761f5a0c317f378d8b60633eb5b67d71b`. Both local

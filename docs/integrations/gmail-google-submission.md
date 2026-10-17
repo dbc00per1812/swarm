@@ -9,13 +9,16 @@ Gateway version 16 is active. The privacy URL remains saved in Google Branding.
 See `../../plans/gmail-approval.production.md` for the deployment and check record.
 Gmail audience access remains External and Testing. This package is not submitted.
 
+See [the current verification record](gmail-verification-progress.md) for the
+saved public name, DNS requirement, demonstration sequence, and assessment timing.
+
 ## Console fields
 
 | Field                | Exact value or current condition                                           |
 | -------------------- | -------------------------------------------------------------------------- |
 | Project              | `swarm-mcp`, number `441732284617`                                         |
-| Current app name     | `Swarm MCP personal preview`                                               |
-| Proposed name change | None in this continuation; final branding requires operator approval       |
+| Current app name     | `Swarm`                                               |
+| Name save verified   | Swarm name persisted after console reload on 16 October 2026       |
 | Public operator      | Darragh Buckley 1812                                                       |
 | User support email   | `darragh.buckley1812@gmail.com`                                            |
 | Homepage             | `https://dbc00per1812.github.io/swarm/`                                    |
@@ -35,7 +38,8 @@ Gmail audience access remains External and Testing. This package is not submitte
 
 Saved domains are configuration entries. They do not prove OAuth verification
 acceptance. Search Console verified the GitHub Pages URL prefix through its HTML
-file. Google's reviewer must accept the applicable hosted-domain evidence.
+file. Google's current domain guide requires DNS Domain verification. The URL
+prefix does not complete that requirement. See the current verification record.
 
 ## Scope justification to enter
 
