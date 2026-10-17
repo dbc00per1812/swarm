@@ -171,6 +171,68 @@ async function signIn(w) {
   );
 }
 
+for (const kind of ["native", "mcp"]) {
+  test(`A ${kind} connector enables or clears its complete current catalog only after saving`, async () => {
+    const p = await page();
+    try {
+      const connection = p.connections[0];
+      connection.kind = kind;
+      connection.provider = kind === "native" ? "github" : null;
+      connection.tools.push({ id: "write", name: "Create issue" });
+      connection.enabledTools = [];
+      await signIn(p.w);
+      const card = () =>
+        p.w.document.getElementById(`account-${connection.id}`);
+      const control = (name) => {
+        const button = [...card().querySelectorAll("button")].find((b) =>
+          b.textContent === name
+        );
+        assert.ok(button, `Missing button: ${name}`);
+        assert.equal(button.type, "button");
+        button.click();
+      };
+      control("Enable all");
+      assert.equal(
+        card().querySelectorAll("input[type=checkbox]:checked").length,
+        2,
+      );
+      assert.deepEqual(connection.enabledTools, []);
+      assert.equal(
+        p.w.document.getElementById(`account-${p.connections[1].id}`)
+          .querySelectorAll(
+            "input[type=checkbox]:checked",
+          ).length,
+        1,
+      );
+      const save = () =>
+        card().querySelector("form.tools").dispatchEvent(
+          new p.w.Event("submit", { cancelable: true, bubbles: true }),
+        );
+      save();
+      await until(() =>
+        connection.enabledTools.length === 2 &&
+        p.w.document.querySelector("#notice").textContent ===
+          "Tool permissions saved."
+      );
+      assert.deepEqual(connection.enabledTools, [
+        "github_list_pull_requests",
+        "write",
+      ]);
+      control("Clear selection");
+      assert.equal(
+        card().querySelectorAll("input[type=checkbox]:checked").length,
+        0,
+      );
+      assert.equal(connection.enabledTools.length, 2);
+      save();
+      await until(() => connection.enabledTools.length === 0);
+      assert.equal(p.connections[1].enabledTools.length, 1);
+    } finally {
+      p.close();
+    }
+  });
+}
+
 test("A user signs in, manages two accounts, saves agent setup, and signs out", async () => {
   const p = await page();
   try {

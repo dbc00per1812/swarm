@@ -337,6 +337,28 @@ export function createTeams(
         row.append(input, label);
         form.append(row);
       }
+      const selection = node("div", "", "actions");
+      for (
+        const [label, checked] of [["Share all", true], [
+          "Clear selection",
+          false,
+        ]]
+      ) {
+        selection.append(button(label, () => {
+          for (const input of form.querySelectorAll("input[type=checkbox]")) {
+            input.checked = checked;
+          }
+          message("Selection changed. Select Save sharing to apply it.");
+        }, true));
+      }
+      form.append(
+        node(
+          "p",
+          "Share all selects every enabled tool listed here, including tools that change data. Select Save sharing to apply the selection.",
+          "muted",
+        ),
+        selection,
+      );
       const save = node("button", "Save sharing");
       save.type = "submit";
       form.append(save);

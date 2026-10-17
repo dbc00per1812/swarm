@@ -495,6 +495,28 @@ function accountCard(connection) {
     toolForm.append(row);
   }
   if (connection.tools.length) {
+    const selection = node("div", "", "actions");
+    for (
+      const [label, checked] of [["Enable all", true], [
+        "Clear selection",
+        false,
+      ]]
+    ) {
+      selection.append(button(label, () => {
+        for (const input of toolForm.querySelectorAll("input[type=checkbox]")) {
+          input.checked = checked;
+        }
+        message("Selection changed. Select Save tools to apply it.");
+      }, true));
+    }
+    toolForm.prepend(
+      node(
+        "p",
+        "Enable all selects every listed tool, including tools that change data. New tools require a new selection.",
+        "muted",
+      ),
+      selection,
+    );
     const saveTools = node("button", "Save tools");
     saveTools.type = "submit";
     toolForm.append(saveTools);
