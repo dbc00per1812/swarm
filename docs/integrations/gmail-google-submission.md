@@ -33,7 +33,7 @@ saved public name, DNS requirement, demonstration sequence, and assessment timin
 | Callback             | `https://xatpcwatmcpjznhwgpit.supabase.co/functions/v1/mcp/callback/gmail` |
 | Scope                | `https://www.googleapis.com/auth/gmail.readonly`                           |
 | Data Access state    | This sole scope was saved in the earlier session                           |
-| Audience             | External, Testing; one test user, no other users                           |
+| Audience             | External, Testing; two listed test accounts                               |
 | Publish control      | Enabled after the privacy URL save; audience remains Testing               |
 | Verification Center  | No submission offered while the present Testing state remains              |
 | Developer contacts   | Existing monitored contacts; no change in this continuation                |

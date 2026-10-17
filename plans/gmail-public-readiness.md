@@ -20,7 +20,7 @@ record is in `docs/integrations/gmail-verification-progress.md`.
 The correct project is `swarm-mcp`, number `441732284617`. Its client ID prefix
 matches the configured Gmail client. The sole Data Access scope is the saved
 `gmail.readonly` permission. Audience remains External and Testing. The console
-shows one test user and no other users.
+lists two test accounts after the demonstration account was added on 17 October 2026.
 
 A fresh authenticated console tab confirms the saved homepage
 `https://useswarm.app/`. Authorized domains include

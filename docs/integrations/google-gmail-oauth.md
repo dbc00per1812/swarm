@@ -55,8 +55,8 @@ after a fresh console reload. The OAuth client retains its internal preview labe
 Google and GitHub verified `useswarm.app` through DNS on 17 October 2026.
 The new website serves the existing release with HTTPS enforcement.
 
-Audience still shows External and Testing, with one test user and no other
-users. Publish app is enabled after the privacy link save. Verification Center
+Audience still shows External and Testing, with two listed test accounts.
+Publish app is enabled after the privacy link save. Verification Center
 offers no submission while this Testing state remains. The publication changed
 the Google privacy link initially. Later work saved the public name and domain
 URLs. No audience change was made.

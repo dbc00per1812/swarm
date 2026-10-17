@@ -28,7 +28,7 @@ The following saved values were inspected:
 | Declared scope | `https://www.googleapis.com/auth/gmail.readonly` only |
 | OAuth client | One existing Web application client |
 | Callback | `https://xatpcwatmcpjznhwgpit.supabase.co/functions/v1/mcp/callback/gmail` |
-| Audience | External, Testing |
+| Audience | External, Testing; two listed test accounts |
 | Verification Center | No submission form while the app remains in Testing |
 
 The homepage, privacy policy, Gmail notice, and Google verification file returned
@@ -69,6 +69,19 @@ The new homepage, privacy URL, and authorized domain were saved in Google Brandi
 Resolve Google's callback-domain requirement before moving the working callback.
 Do not assume that a paid custom callback domain is necessary.
 
+## Demonstration account preparation
+
+The user supplied a separate demonstration account on 17 October 2026.
+Google saved it as the second test user. The user confirmed that the mailbox
+contains a synthetic email with the subject `Swarm verification demo`.
+
+The existing unconnected Gmail card opened Google's authorization process.
+The selected Google account matches the supplied demonstration account. Google
+requests permission to view email messages and settings. Its permission screen
+links to the published Swarm privacy policy and identifies the Supabase callback domain.
+The final permission remains pending user confirmation. No Gmail search has run
+for this account, and no completed demonstration video is claimed.
+
 ## Submission materials ready
 
 The exact scope justification and use-case description remain in
@@ -101,7 +114,8 @@ Use a mailbox containing only synthetic demonstration content. Keep unrelated
 accounts and private mail outside the recording. Exclude passwords, tokens,
 OAuth callback codes, and browser proof values. Do not send demonstration email
 without explicit authorization. Do not revoke an existing operational grant for
-recording purposes. No test email or new Google account was created here.
+recording purposes. The user prepared the synthetic email. The assistant did not
+send email or create a Google account.
 
 ## Security evidence prepared
 
