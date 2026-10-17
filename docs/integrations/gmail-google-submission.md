@@ -9,6 +9,9 @@ Gateway version 16 is active. The privacy URL remains saved in Google Branding.
 See `../../plans/gmail-approval.production.md` for the deployment and check record.
 Gmail audience access remains External and Testing. This package is not submitted.
 
+Update, 2026-10-17: `useswarm.app` is registered, DNS-verified, and serving the
+website over HTTPS. Google Branding stores the new homepage and privacy URLs.
+
 See [the current verification record](gmail-verification-progress.md) for the
 saved public name, DNS requirement, demonstration sequence, and assessment timing.
 
@@ -21,12 +24,12 @@ saved public name, DNS requirement, demonstration sequence, and assessment timin
 | Name save verified   | Swarm name persisted after console reload on 16 October 2026       |
 | Public operator      | Darragh Buckley 1812                                                       |
 | User support email   | `darragh.buckley1812@gmail.com`                                            |
-| Homepage             | `https://dbc00per1812.github.io/swarm/`                                    |
+| Homepage             | `https://useswarm.app/`                                                    |
 | Homepage state       | Saved and visible in a fresh authenticated console tab                     |
-| Privacy policy URL   | Saved: `https://dbc00per1812.github.io/swarm/privacy.html`                 |
+| Privacy policy URL   | Saved: `https://useswarm.app/privacy.html`                                 |
 | Privacy policy state | Published, HTTP 200; saved Google field verified after reload              |
 | Terms URL            | Leave empty unless separately approved; terms are optional                 |
-| Authorized domains   | Saved: `dbc00per1812.github.io`, `xatpcwatmcpjznhwgpit.supabase.co`        |
+| Authorized domains   | Saved: `useswarm.app`, `xatpcwatmcpjznhwgpit.supabase.co`                    |
 | Callback             | `https://xatpcwatmcpjznhwgpit.supabase.co/functions/v1/mcp/callback/gmail` |
 | Scope                | `https://www.googleapis.com/auth/gmail.readonly`                           |
 | Data Access state    | This sole scope was saved in the earlier session                           |
@@ -36,10 +39,10 @@ saved public name, DNS requirement, demonstration sequence, and assessment timin
 | Developer contacts   | Existing monitored contacts; no change in this continuation                |
 | Demonstration URL    | Pending real final-flow capture; no URL is invented                        |
 
-Saved domains are configuration entries. They do not prove OAuth verification
-acceptance. Search Console verified the GitHub Pages URL prefix through its HTML
-file. Google's current domain guide requires DNS Domain verification. The URL
-prefix does not complete that requirement. See the current verification record.
+Search Console verified the `useswarm.app` Domain property through DNS on
+17 October 2026. GitHub also verified ownership. These checks do not establish
+OAuth application acceptance. Hosted callback-domain evidence remains unresolved.
+See the current verification record.
 
 ## Scope justification to enter
 

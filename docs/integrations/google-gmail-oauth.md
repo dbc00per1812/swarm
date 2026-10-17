@@ -47,16 +47,19 @@ change requested permissions or approve the scope. The application remains in
 Testing.
 
 A fresh authenticated console tab now confirms the saved branding values. The
-homepage is `https://dbc00per1812.github.io/swarm/`. Authorized domains include
-`dbc00per1812.github.io` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
-link is saved as `https://dbc00per1812.github.io/swarm/privacy.html`. Terms
+homepage is `https://useswarm.app/`. Authorized domains include
+`useswarm.app` and `xatpcwatmcpjznhwgpit.supabase.co`. The privacy
+link is saved as `https://useswarm.app/privacy.html`. Terms
 remain empty. The later saved public app name is `Swarm`. The name persisted
 after a fresh console reload. The OAuth client retains its internal preview label.
+Google and GitHub verified `useswarm.app` through DNS on 17 October 2026.
+The new website serves the existing release with HTTPS enforcement.
 
 Audience still shows External and Testing, with one test user and no other
 users. Publish app is enabled after the privacy link save. Verification Center
 offers no submission while this Testing state remains. The publication changed
-only the Google privacy link; no audience change was made.
+the Google privacy link initially. Later work saved the public name and domain
+URLs. No audience change was made.
 
 ## Integration contract
 
@@ -256,9 +259,9 @@ does not establish a recipient's retention, human-access, or training rules.
 
 | Field               | Prepared value or required decision                                                     |
 | ------------------- | --------------------------------------------------------------------------------------- |
-| App name            | Keep `Swarm MCP personal preview` until an operator approves final branding             |
-| Homepage            | Saved: `https://dbc00per1812.github.io/swarm/`; OAuth domain acceptance remains pending |
-| Privacy URL         | `https://dbc00per1812.github.io/swarm/privacy.html`; published and saved in Google      |
+| App name            | Saved: `Swarm`                                                                          |
+| Homepage            | Saved: `https://useswarm.app/`; DNS ownership verified                                  |
+| Privacy URL         | `https://useswarm.app/privacy.html`; published and saved in Google                      |
 | Terms URL           | Optional; leave empty unless separately approved                                        |
 | Data Access         | Only `https://www.googleapis.com/auth/gmail.readonly`                                   |
 | Support contact     | Approved: `darragh.buckley1812@gmail.com`                                               |
@@ -335,8 +338,8 @@ The confirmed public operator name is Darragh Buckley 1812. The approved support
 and privacy address is `darragh.buckley1812@gmail.com`. The following facts
 still require confirmation.
 
-- Accepted ownership-verification method for the existing hosted addresses, or
-  an owned domain if Google requires one.
+- Accepted authorization evidence for the existing Supabase callback domain.
+  Website DNS ownership is now verified for `useswarm.app`.
 - Infrastructure logs, backup retention, and complete deletion process.
 - Permitted recipient data handling. Swarm confirmation no longer depends on
   choosing a particular client.
@@ -349,4 +352,5 @@ The published policy is `web/privacy.html`. Concrete submission fields and
 checks are in `gmail-google-submission.md`. Terms remain an optional operator
 drafting decision. Policy publication and approval deployment are complete.
 OAuth verification submission, an assessment, and a Google production-status
-change remain pending. No domain purchase is planned or authorized.
+change remain pending. The approved `useswarm.app` purchase is complete.
+The order total was $8.75 USD for one year, with domain auto-renew disabled.

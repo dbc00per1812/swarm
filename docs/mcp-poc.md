@@ -16,11 +16,17 @@ npm ci
 npm test
 ```
 
-Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`,
-`gmail-data.html`, `dist/app.js`, and `dist/callback.js` from `web/`. Keep the
-`dist/` directory in the published output. The build bundles the pinned Supabase
+Publish `.nojekyll`, `CNAME`, `index.html`, `styles.css`, `callback.html`,
+`privacy.html`, `gmail-data.html`, `dist/app.js`, and `dist/callback.js` from `web/`.
+Keep the `dist/` directory in the published output. The build bundles the pinned Supabase
 browser client. Generated files stay outside the source branch. GitHub Pages
 serves the `gh-pages` branch.
+
+The public website is `https://useswarm.app/`. Keep `web/CNAME` in each
+deployment. Google and GitHub verified domain ownership through DNS on
+17 October 2026. Keep both verification TXT records. The root ALIAS and `www`
+CNAME point to `dbc00per1812.github.io`. GitHub enforces HTTPS and redirects the
+previous project URL to the new domain.
 
 The Google site-verification file is `web/googledfccf295f08c8741.html`. It is
 published and verifies the current Swarm URL-prefix property in Search Console.
