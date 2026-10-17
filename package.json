@@ -4,13 +4,17 @@
   "type": "module",
   "scripts": {
     "build": "esbuild web/app.js web/callback.js --bundle --minify --format=iife --target=es2022 --outdir=web/dist",
-    "test": "npm run build && node --test web/tests/*.test.js"
+    "test": "npm run build && node --test web/tests/*.test.js",
+    "test:db": "node --test supabase/tests/gmail-approvals.test.js supabase/tests/gmail-approvals-target.test.js",
+    "test:db:concurrency": "node --test supabase/tests/gmail-approvals-concurrency.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.3"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "esbuild": "0.28.2",
-    "jsdom": "30.1.2"
+    "jsdom": "30.1.2",
+    "pg": "^8.16.3"
   }
 }

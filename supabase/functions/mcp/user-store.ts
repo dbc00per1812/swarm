@@ -182,21 +182,24 @@ export class UserStore {
   }
   async secret(row: Connection) {
     if (!row.ciphertext) return null;
-    const [iv, data] = row.ciphertext.split(".").map((value) =>
+    return credentialSchema.parse(
+      await this.decrypt(row.user_id, row.id, row.ciphertext),
+    );
+  }
+  async decrypt(user: string, id: string, ciphertext: string) {
+    const [iv, data] = ciphertext.split(".").map((value) =>
       Uint8Array.from(atob(value), (c) => c.charCodeAt(0))
     );
     const decoded = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
         iv,
-        additionalData: new TextEncoder().encode(`${row.user_id}:${row.id}`),
+        additionalData: new TextEncoder().encode(`${user}:${id}`),
       },
       await this.key(),
       data,
     );
-    return credentialSchema.parse(
-      JSON.parse(new TextDecoder().decode(decoded)),
-    );
+    return JSON.parse(new TextDecoder().decode(decoded)) as unknown;
   }
   async saveCredential(
     row: Connection,

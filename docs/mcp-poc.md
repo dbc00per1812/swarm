@@ -16,10 +16,22 @@ npm ci
 npm test
 ```
 
-Publish `.nojekyll`, `index.html`, `styles.css`, `callback.html`, `dist/app.js`,
-and `dist/callback.js` from `web/`. Keep the `dist/` directory in the published
-output. The build bundles the pinned Supabase browser client. Generated files
-stay outside the source branch. GitHub Pages serves the `gh-pages` branch.
+Publish `.nojekyll`, `CNAME`, `index.html`, `styles.css`, `callback.html`,
+`privacy.html`, `gmail-data.html`, `dist/app.js`, and `dist/callback.js` from `web/`.
+Keep the `dist/` directory in the published output. The build bundles the pinned Supabase
+browser client. Generated files stay outside the source branch. GitHub Pages
+serves the `gh-pages` branch.
+
+The public website is `https://useswarm.app/`. Keep `web/CNAME` in each
+deployment. Google and GitHub verified domain ownership through DNS on
+17 October 2026. Keep both verification TXT records. The root ALIAS and `www`
+CNAME point to `dbc00per1812.github.io`. GitHub enforces HTTPS and redirects the
+previous project URL to the new domain.
+
+The Google site-verification file is `web/googledfccf295f08c8741.html`. It is
+published and verifies the current Swarm URL-prefix property in Search Console.
+Keep its original bytes and filename in each website deployment to retain
+verification.
 
 Set `SWARM_UI_URL`, the Supabase Auth site URL, and its redirect allowlist to
 the website URL. Configure GitHub in Supabase Auth for account creation and
@@ -58,6 +70,11 @@ installation in another workspace.
 
 Google test authorizations can expire after seven days. Gmail is not verified
 for general distribution. Existing personal connections remain available.
+
+The website includes a Gmail data-use notice and access-removal instructions.
+This technical notice does not replace the operator's complete privacy policy.
+See `docs/integrations/google-gmail-oauth.md` for public verification
+requirements.
 
 ## Custom MCP servers
 
