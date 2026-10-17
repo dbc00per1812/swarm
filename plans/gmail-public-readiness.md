@@ -122,6 +122,10 @@ synthetic backend. It made no Google calls. It does not prove production OAuth,
 final Gmail result retrieval, or Google policy acceptance. The native database
 is a disposable local PostgreSQL instance. It does not change production.
 
+The deployed real Gmail check also passed. The exact approved synthetic search
+returned zero matches. Approval reuse was blocked, and encrypted query data was
+cleared. This check did not retrieve message headers or demonstrate fresh OAuth.
+
 ## Production audit
 
 Read-only checks found five connections, two active keys, two pending OAuth

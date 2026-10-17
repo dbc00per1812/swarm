@@ -71,22 +71,26 @@ The check uses a unique synthetic subject query, a one-day window, and a limit
 of one result. The local harness discards returned headers and reports only the
 result count. No message is sent or modified.
 
-The user reported approving the request. The exact retry remained blocked.
-A database check showed no recorded approval, use, or denial. The production
-review panel also showed an unchecked permitted-use checkbox. The user was
-asked to complete the visible approval and report any error. The request expired
-without a recorded decision. A fresh request for the same query was prepared.
-It expires at 19:09:21 Chicago time. No successful real Gmail retrieval is claimed.
+The live check passed at 19:03 Chicago time. After the user authorized browser
+operation, the assistant selected the checkbox and approval button on the user's
+behalf.
+Swarm displayed an approved status. The exact search then returned an empty
+result list from Gmail. The harness reported zero matches and discarded the
+payload. A second attempt with the same approval was blocked.
 
-The successful hosted synthetic checks establish approval behavior. They do not
-establish a successful real Google API response or a complete OAuth demonstration.
+A database check confirmed approval, consumption, and cleared query ciphertext.
+The initial request had expired without a recorded decision. The fresh request
+completed successfully. No application change was required for this check.
+
+This result verifies the deployed approval and real Gmail message-list path.
+With zero matches, it does not exercise message-header retrieval. The complete
+OAuth demonstration with synthetic messages remains required for submission.
 
 The source branch is published in [draft pull request 7](https://github.com/dbc00per1812/swarm/pull/7).
 No merge to `main` is claimed.
 
 ## Remaining public release conditions
 
-- Complete the real approved Gmail search and verify that its approval cannot be reused.
 - Prepare a separate Google test project and synthetic mailbox for the demonstration.
 - Record the real OAuth consent, approved search, returned headers, and access withdrawal.
 - Establish supported agent recipient practices for training, retention, and human access.

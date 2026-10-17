@@ -106,8 +106,8 @@ Google requires an end-to-end demonstration. See its
 
 ## Review and deployment order
 
-Deployment steps 3–8 are complete for the existing Testing audience, except the
-real approved Gmail retrieval check. The deployment record tracks that check.
+Deployment steps 3–8 are complete for the existing Testing audience. The real
+approved Gmail search returned zero matches, and approval reuse was blocked.
 Steps 1–2 retain unresolved operating conditions. Steps 9–13 remain submission
 and public release work. Do not reapply the installed migration.
 
