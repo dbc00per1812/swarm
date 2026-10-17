@@ -79,8 +79,28 @@ The existing unconnected Gmail card opened Google's authorization process.
 The selected Google account matches the supplied demonstration account. Google
 requests permission to view email messages and settings. Its permission screen
 links to the published Swarm privacy policy and identifies the Supabase callback domain.
-The final permission remains pending user confirmation. No Gmail search has run
-for this account, and no completed demonstration video is claimed.
+The user approved this permission at the action step. The assistant selected
+Continue, and the existing unconnected card became connected to the demonstration mailbox.
+
+Two initial approved searches returned no matches. Gmail's own search, including
+Spam and Trash, also found no message with the expected subject. The user then
+explicitly approved one synthetic email from the demonstration account to itself.
+The assistant sent that email, and Gmail displayed Message sent.
+
+The next approved search returned one result with the exact expected subject.
+The query used the synthetic subject, demonstration recipient, and seven-day window.
+The maximum result count was one. The local check discarded returned headers.
+It requested no message bodies or attachments. Approval reuse was blocked.
+Database checks confirmed approval, consumption, and cleared encrypted query data.
+
+After the check, the demonstration connection remained saved with zero enabled tools.
+A subsequent request for that connection was rejected before approval creation.
+The original Gmail connection kept its enabled tool. It remains the sole enabled
+mailbox for Gmail requests without a connection ID.
+
+These checks establish a fresh OAuth connection and actual message-header retrieval.
+No completed demonstration video is claimed. Recorder setup did not start a
+recording. The captured screenshots remain preparation evidence.
 
 ## Submission materials ready
 
@@ -90,8 +110,9 @@ Gmail's search query parameter. The narrower metadata scope does not support tha
 parameter. See the [message-list reference](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list).
 
 The public policy and Gmail disclosure describe agent transfers, approval,
-credential storage, and removal limits. The live search check returned zero
-matches. Approval reuse was blocked, and its encrypted query was cleared.
+credential storage, and removal limits. The initial live search returned zero
+matches. The later demonstration-account check returned one synthetic match.
+Approval reuse was blocked, and its encrypted query was cleared.
 See the [deployment record](../../plans/gmail-approval.production.md).
 
 The following demonstration sequence is prepared for recording with final branding
@@ -114,8 +135,9 @@ Use a mailbox containing only synthetic demonstration content. Keep unrelated
 accounts and private mail outside the recording. Exclude passwords, tokens,
 OAuth callback codes, and browser proof values. Do not send demonstration email
 without explicit authorization. Do not revoke an existing operational grant for
-recording purposes. The user prepared the synthetic email. The assistant did not
-send email or create a Google account.
+recording purposes. One synthetic email was sent after explicit user authorization.
+No Google account was created. The selected demonstration account contains other
+mail; keep its unrelated content and account information outside the final video.
 
 ## Security evidence prepared
 

@@ -15,6 +15,12 @@ Domain auto-renew is off. Google and GitHub verified ownership through DNS.
 GitHub Pages serves the website with HTTPS enforcement. The current domain
 record is in `docs/integrations/gmail-verification-progress.md`.
 
+The demonstration account completed fresh Google authorization on 17 October 2026.
+After explicit approval, one synthetic email was sent from that account to itself.
+The next approved search returned one message with the exact expected subject.
+The local check discarded headers. Approval reuse was blocked, and encrypted
+query data was cleared. A completed Google verification video remains outstanding.
+
 ## Google configuration
 
 The correct project is `swarm-mcp`, number `441732284617`. Its client ID prefix

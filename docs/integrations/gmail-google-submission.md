@@ -64,6 +64,11 @@ That confirmation binds the exact mailbox, query, limit, and requesting agent
 key. It permits one attempt within ten minutes. Hosted synthetic checks passed.
 The real OAuth demonstration remains required for submission.
 
+On 17 October 2026, a separate demonstration account completed the real OAuth flow.
+An approved search returned one synthetic message with the expected subject.
+The local check discarded headers and verified approval reuse protection and query cleanup.
+The completed verification video remains outstanding. See the current verification record.
+
 References:
 [message-list API](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list)
 and

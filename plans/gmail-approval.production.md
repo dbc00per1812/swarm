@@ -89,9 +89,38 @@ OAuth demonstration with synthetic messages remains required for submission.
 The source branch is published in [draft pull request 7](https://github.com/dbc00per1812/swarm/pull/7).
 No merge to `main` is claimed.
 
+## Demonstration-account follow-up, 17 October 2026
+
+The user supplied a second test account and approved its Gmail read-only grant.
+The assistant completed Google's consent screen. The existing unconnected Gmail
+card became connected to that account. No requested scope changed.
+
+Initial searches returned zero matches. Gmail's own search also found no matching
+subject, including Spam and Trash. After separate explicit approval, the assistant
+sent one synthetic email from that account to itself. Gmail displayed Message sent.
+
+A new approved search returned one message with the exact subject
+`Swarm verification demo`. It used the demonstration recipient, a seven-day window,
+and a maximum of one result. The local check discarded returned headers.
+It requested no bodies or attachments. Approval reuse was blocked.
+Database checks confirmed approval, consumption, and cleared encrypted query data.
+
+The demonstration tool was then disabled. A subsequent request for that connection
+was rejected before approval creation. The account remains connected, and the
+original Gmail account keeps its enabled tool. This preserves ordinary account selection.
+
+Google and GitHub now verify `useswarm.app` through DNS. The approved domain
+registration cost $8.75 USD for one year, with auto-renew disabled. The website
+uses HTTPS, and Google Branding stores its new homepage and privacy URLs.
+See the current [verification record](../docs/integrations/gmail-verification-progress.md).
+
+This follow-up verifies fresh OAuth completion and message-header retrieval.
+A completed Google demonstration video remains outstanding. No assessment or
+Google public audience change occurred.
+
 ## Remaining public release conditions
 
-- Prepare a separate Google test project and synthetic mailbox for the demonstration.
+- Keep future Google development separate from production and record only synthetic demonstration content.
 - Record the real OAuth consent, approved search, returned headers, and access withdrawal.
 - Establish supported agent recipient practices for training, retention, and human access.
 - Resolve the earlier credential incident through a coordinated owner rotation process.
@@ -104,9 +133,10 @@ Generic agent keys do not identify an agent provider. The permitted-use checkbox
 does not certify the recipient's practices. The published policy discloses that
 limit and the remaining historical-retention uncertainty.
 
-No assessment was purchased. No contract, domain purchase, or billing change was
-made. Google audience access remains Testing. Existing saved branding and privacy
-links remain in place. No Google verification acceptance is claimed.
+No assessment was purchased. The initial 16 October approval release made no
+contract, domain purchase, or billing change. The approved domain purchase and
+new branding links are recorded in the later follow-up above. Google audience
+access remains Testing. No Google verification acceptance is claimed.
 
 If a gateway correction becomes necessary, retain the additive migration. Keep
 Gmail blocked until a reviewed replacement works. Do not restore an approval
