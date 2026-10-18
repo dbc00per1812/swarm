@@ -5,6 +5,11 @@ import {
   providerSchema,
 } from "./connection-store.ts";
 import { limitedBody } from "./app.ts";
+import {
+  accessKeySchema,
+  type KeyOptions,
+  publicKey,
+} from "./access-policy.ts";
 
 export const toolSchema = z.object({
   id: z.string().max(100),
@@ -265,15 +270,38 @@ export class UserStore {
     return rows[0];
   }
   async owner(token: string) {
-    if (!/^[A-Za-z0-9_-]{32,256}$/.test(token)) return null;
-    return z.uuid().nullable().parse(
-      await this.request("rpc/swarm_user_key_owner", {
-        method: "POST",
-        body: JSON.stringify({ p_token_hash: await digest(token) }),
-      }),
-    );
+    return (await this.accessKey(token))?.user_id ?? null;
   }
-  async issue(user: string, token: string) {
+  async accessKey(token: string) {
+    if (!/^[A-Za-z0-9_-]{32,256}$/.test(token)) return null;
+    const rows = z.array(accessKeySchema).parse(
+      await this.request(
+        `swarm_user_mcp_keys?token_hash=eq.${await digest(token)}`,
+      ),
+    );
+    if (rows.length !== 1) return null;
+    const key = rows[0];
+    if (
+      key.revoked_at || (key.expires_at !== null &&
+        (!Number.isFinite(Date.parse(key.expires_at)) ||
+          Date.parse(key.expires_at) <= Date.now()))
+    ) return null;
+    return key;
+  }
+  async listKeys(user: string) {
+    return z.array(accessKeySchema).parse(
+      await this.request(
+        `swarm_user_mcp_keys?user_id=eq.${
+          z.uuid().parse(user)
+        }&select=id,user_id,name,grants,expires_at,created_at,revoked_at`,
+      ),
+    ).map(publicKey);
+  }
+  async issue(
+    user: string,
+    token: string,
+    options: KeyOptions = { name: "Legacy key", grants: null },
+  ) {
     const rows = z.array(z.object({ id: z.uuid() })).parse(
       await this.request("swarm_user_mcp_keys", {
         method: "POST",
@@ -281,6 +309,9 @@ export class UserStore {
         body: JSON.stringify({
           user_id: z.uuid().parse(user),
           token_hash: await digest(token),
+          name: options.name,
+          grants: options.grants,
+          expires_at: options.expiresAt ?? null,
         }),
       }),
     );

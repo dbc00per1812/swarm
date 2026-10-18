@@ -28,6 +28,17 @@ import {
 
 import { createTeamRoutes } from "./teams.ts";
 import { GmailApprovals } from "./gmail-approvals.ts";
+import { createVaultRoutes } from "./vault.ts";
+import { Activity } from "./activity.ts";
+import {
+  grantResources,
+  grantsTool,
+  type KeyOptions,
+  keyOptionsSchema,
+  resourcesSchema,
+  restrictedResources,
+  scopedConnections,
+} from "./access-policy.ts";
 
 export interface BetaConfig extends OAuthConfig {
   projectUrl: string;
@@ -41,11 +52,22 @@ const nativeIds: Record<Provider, string> = {
   linear: "linear_list_issues",
   gmail: "gmail_search",
 };
-const settingsSchema = z.object({
-  repositories: z.array(
-    z.string().regex(/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9_.-]{1,100}$/),
-  ).max(100).optional(),
-}).strict();
+const settingsSchema = resourcesSchema;
+function validateSettings(
+  provider: Provider | null,
+  settings: z.infer<typeof settingsSchema>,
+) {
+  const allowed = provider === "github"
+    ? "repositories"
+    : provider === "slack"
+    ? "channels"
+    : provider === "linear"
+    ? "teams"
+    : undefined;
+  if (Object.keys(settings).some((key) => key !== allowed)) {
+    throw new ApiError("Use resource settings for this provider.");
+  }
+}
 const bearerSchema = z.string().max(16_384).regex(/^[\x21-\x7e]*$/);
 let catalogPromise: Promise<Tool[]> | undefined;
 export function nativeCatalog() {
@@ -89,6 +111,15 @@ const safe = (row: Connection) => ({
   settings: row.settings,
   endpointUrl: row.endpoint_url,
 });
+const safeAccess = (row: Connection) => ({
+  id: row.id,
+  kind: row.kind,
+  provider: row.provider,
+  name: row.name,
+  status: row.kind === "mcp" || row.ciphertext ? "connected" : "disconnected",
+  tools: row.tool_catalog,
+  enabledTools: row.enabled_tools,
+});
 // Postgres jsonb can reorder schema properties between discovery and execution.
 function canonical(value: unknown) {
   return JSON.stringify(
@@ -123,7 +154,9 @@ export function createBetaGateway(
 ) {
   const oauth = providerOAuth(config, fetcher);
   const teams = createTeamRoutes(store, config.uiUrl);
+  const vaultRoutes = createVaultRoutes(store);
   const gmailApprovals = new GmailApprovals(store, config.uiUrl);
+  const activity = new Activity(store);
   const origin = new URL(config.uiUrl).origin;
   const base = new URL(config.endpointUrl).pathname.replace(/\/$/, "");
   const counts = new Map<string, { until: number; count: number }>();
@@ -186,6 +219,9 @@ export function createBetaGateway(
     return user.data.id;
   }
   async function input(request: Request) {
+    const maximum = new URL(request.url).pathname.endsWith("/v1/vault")
+      ? 1_050_000
+      : 32_768;
     if (
       !request.headers.get("Content-Type")?.toLowerCase().startsWith(
         "application/json",
@@ -193,15 +229,16 @@ export function createBetaGateway(
     ) throw new ApiError("Use application/json.", 415);
     try {
       return JSON.parse(
-        new TextDecoder().decode(await limitedBody(request.body, 32_768)),
+        new TextDecoder().decode(await limitedBody(request.body, maximum)),
       );
     } catch {
-      throw new ApiError("Use a JSON request within 32 KiB.");
+      throw new ApiError("Use a JSON request within the request size limit.");
     }
   }
   async function nativeRuntime(
     row: Connection,
     authorize: () => Promise<unknown>,
+    settings = settingsSchema.parse(row.settings),
   ): Promise<AppConfig> {
     const effective: AppConfig = {};
     let credential = await store.secret(row);
@@ -233,12 +270,15 @@ export function createBetaGateway(
     }
     if (provider === "github") {
       effective.githubToken = credential.accessToken;
-      effective.githubRepositories =
-        settingsSchema.parse(row.settings).repositories ?? [];
+      effective.githubRepositories = settings.repositories ?? [];
     }
-    if (provider === "slack") effective.slackToken = credential.accessToken;
+    if (provider === "slack") {
+      effective.slackToken = credential.accessToken;
+      effective.slackChannels = settings.channels;
+    }
     if (provider === "linear") {
       effective.linearToken = `Bearer ${credential.accessToken}`;
+      effective.linearTeams = settings.teams;
     }
     if (provider === "gmail") {
       effective.gmailAccessToken = credential.accessToken;
@@ -255,15 +295,87 @@ export function createBetaGateway(
     const token = request.headers.get("Authorization")?.match(
       /^Bearer ([A-Za-z0-9_-]+)$/,
     )?.[1];
-    const user = token ? await store.owner(token) : null;
-    if (!user) return reply({ error: "Authentication required." }, 401);
+    const authenticated = token ? await store.accessKey(token) : null;
+    if (!authenticated) {
+      return reply({ error: "Authentication required." }, 401);
+    }
+    const key = authenticated;
+    const user = key.user_id;
     rate(`mcp:${user}`, 120);
     if (request.method !== "POST") return reply({ error: "Use POST." }, 405);
     const body = await input(request);
-    const rows = await store.accessible(user);
+    const allRows = await store.accessible(user);
+    const rows = scopedConnections(key, allRows);
+    let permissionChanged = false;
+    async function authorize(row: Connection, toolId: string) {
+      const currentKey = await store.accessKey(token!);
+      if (
+        !currentKey || currentKey.user_id !== user ||
+        !grantsTool(currentKey, row.id, toolId) ||
+        canonical(grantResources(currentKey, row.id)) !==
+          canonical(grantResources(key, row.id))
+      ) {
+        permissionChanged = true;
+        throw new ApiError("This agent key no longer permits this tool.", 403);
+      }
+      try {
+        return await store.permitted(user, row, toolId);
+      } catch (error) {
+        permissionChanged = true;
+        throw error;
+      }
+    }
     let selected: Connection | undefined;
     let effective: AppConfig = {};
     const name = body?.method === "tools/call" ? body.params?.name : undefined;
+    let attempt: string | undefined;
+    const knownTool =
+      typeof name === "string" && Object.values(nativeIds).includes(name)
+        ? name
+        : allRows.flatMap((row) => row.tool_catalog).find((tool) =>
+          tool.id === name
+        )?.id ?? null;
+    const denied = async (
+      reason: "connection_required" | "tool_unavailable" | "resource_denied",
+      row?: Connection,
+    ) => {
+      await activity.record(
+        user,
+        key.id,
+        row?.id ?? null,
+        knownTool,
+        "denied",
+        reason,
+      );
+    };
+    if (
+      typeof name === "string" && name !== "hub_status" &&
+      name.startsWith("custom_")
+    ) {
+      selected = rows.find((row) =>
+        row.kind === "mcp" && row.enabled_tools.includes(name)
+      );
+      if (!selected) {
+        const attempted = allRows.find((row) =>
+          row.kind === "mcp" &&
+          row.tool_catalog.some((tool) => tool.id === name)
+        );
+        await denied("tool_unavailable", attempted);
+        return reply({
+          jsonrpc: "2.0",
+          id: body.id ?? null,
+          error: { code: -32602, message: "Tool not found." },
+        });
+      }
+      attempt = await activity.record(
+        user,
+        key.id,
+        selected.id,
+        knownTool,
+        "allowed",
+        "execution_started",
+      );
+    }
     if (
       typeof name === "string" && name !== "hub_status" &&
       !name.startsWith("custom_")
@@ -280,6 +392,17 @@ export function createBetaGateway(
         ? matches[0]
         : undefined;
       if (!selected) {
+        const attempted = id
+          ? allRows.find((row) =>
+            row.id === id && row.tool_catalog.some((tool) => tool.id === name)
+          )
+          : undefined;
+        await denied(
+          matches.length > 1 && !id
+            ? "connection_required"
+            : "tool_unavailable",
+          attempted,
+        );
         return toolError(
           body.id,
           matches.length > 1 && !id
@@ -288,6 +411,35 @@ export function createBetaGateway(
         );
       }
       const row = selected;
+      const resources = restrictedResources(key, row);
+      const args = body.params?.arguments;
+      const resourceDenied = name === "github_list_pull_requests"
+        ? !resources.repositories?.some((repository) =>
+          repository.toLowerCase() ===
+            `${args?.owner}/${args?.repo}`.toLowerCase()
+        )
+        : name === "slack_search"
+        ? resources.channels?.length === 0
+        : name === "linear_list_issues"
+        ? resources.teams?.length === 0 ||
+          (resources.teams !== undefined && args?.team !== undefined &&
+            !resources.teams.includes(args.team))
+        : false;
+      if (resourceDenied) {
+        await denied("resource_denied", row);
+        return toolError(
+          body.id,
+          "This resource is outside the agent's allowed scope.",
+        );
+      }
+      attempt = await activity.record(
+        user,
+        key.id,
+        row.id,
+        knownTool,
+        "allowed",
+        "execution_started",
+      );
       if (name === "gmail_search") {
         try {
           const pending = await gmailApprovals.require(
@@ -296,8 +448,17 @@ export function createBetaGateway(
             row,
             body.params?.arguments,
           );
-          if (pending) return toolError(body.id, pending);
+          if (pending) {
+            await activity.finish(
+              user,
+              attempt,
+              "approval_required",
+              "approval_required",
+            );
+            return toolError(body.id, pending);
+          }
         } catch (error) {
+          await activity.finish(user, attempt, "failed", "provider_failed");
           return toolError(
             body.id,
             error instanceof ApiError
@@ -306,10 +467,25 @@ export function createBetaGateway(
           );
         }
       }
-      effective = await nativeRuntime(
-        row,
-        () => store.permitted(user, row, name),
-      );
+      try {
+        effective = await nativeRuntime(
+          row,
+          () => authorize(row, name),
+          resources,
+        );
+      } catch (error) {
+        await activity.finish(
+          user,
+          attempt,
+          error instanceof ApiError && error.status === 403
+            ? "denied"
+            : "failed",
+          error instanceof ApiError && error.status === 403
+            ? "permission_changed"
+            : "provider_failed",
+        );
+        throw error;
+      }
     }
     const enabled = rows.filter((row) =>
       row.kind === "native" && row.ciphertext
@@ -344,7 +520,7 @@ export function createBetaGateway(
               annotations: tool.annotations,
             }, async (args) => {
               try {
-                const current = await store.permitted(user, row, tool.id);
+                const current = await authorize(row, tool.id);
                 if (
                   !current.enabled_tools.includes(tool.id) ||
                   current.revision !== row.revision
@@ -381,7 +557,7 @@ export function createBetaGateway(
                     }, { timeout: 10_000 });
                   },
                   fetcher,
-                  () => store.permitted(user, current, tool.id),
+                  () => authorize(current, tool.id),
                 );
               } catch {
                 return {
@@ -399,17 +575,47 @@ export function createBetaGateway(
       },
     }, async (url, init) => {
       if (selected) {
-        await store.permitted(user, selected, name);
+        await authorize(selected, name);
       }
       return await fetcher(url, init);
     });
-    return await app(
-      new Request(request.url, {
-        method: "POST",
-        headers: request.headers,
-        body: JSON.stringify(body),
-      }),
-    );
+    let response: Response;
+    try {
+      response = await app(
+        new Request(request.url, {
+          method: "POST",
+          headers: request.headers,
+          body: JSON.stringify(body),
+        }),
+      );
+      if (attempt) {
+        const text = new TextDecoder().decode(
+          await limitedBody(response.clone().body, 4_000_000),
+        );
+        const data = text.startsWith("event:") || text.startsWith("data:")
+          ? text.split("\n").find((line) => line.startsWith("data:"))?.slice(5)
+          : text;
+        const payload = data ? JSON.parse(data) : null;
+        const failed = !response.ok || !payload || payload.error ||
+          payload.result?.isError;
+        await activity.finish(
+          user,
+          attempt,
+          permissionChanged ? "denied" : failed ? "failed" : "allowed",
+          permissionChanged
+            ? "permission_changed"
+            : failed
+            ? "provider_failed"
+            : "completed",
+        );
+      }
+    } catch (error) {
+      if (attempt) {
+        await activity.finish(user, attempt, "failed", "provider_failed");
+      }
+      throw error;
+    }
+    return response;
   }
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -479,6 +685,9 @@ export function createBetaGateway(
       }
       const user = await identity(request);
       rate(`api:${user}`, 60);
+      if (path === "/v1/activity" && request.method === "GET") {
+        return reply({ events: await activity.list(user) }, 200, cors);
+      }
       const gmailApproval = path.match(
         /^\/v1\/gmail-approvals\/([a-f0-9-]{36})$/,
       );
@@ -502,6 +711,10 @@ export function createBetaGateway(
           );
         }
         return reply({ error: "Use GET or POST." }, 405, cors);
+      }
+      const vaultResponse = await vaultRoutes(path, request, user, input);
+      if (vaultResponse) {
+        return reply(vaultResponse.body, vaultResponse.status, cors);
       }
       const teamResponse = await teams(path, request, user, input);
       if (teamResponse) {
@@ -553,6 +766,7 @@ export function createBetaGateway(
           return reply(
             {
               connections: (await store.list(user)).map(safe),
+              accessConnections: (await store.accessible(user)).map(safeAccess),
               endpointUrl: config.endpointUrl,
             },
             200,
@@ -576,6 +790,9 @@ export function createBetaGateway(
           ]).parse(await input(request));
           const id = crypto.randomUUID();
           const native = value.kind === "native";
+          if (native && value.settings) {
+            validateSettings(value.provider, value.settings);
+          }
           if (!native) validateEndpoint(value.endpointUrl, config.customPolicy);
           const tools = native
             ? (await nativeCatalog()).filter((tool) =>
@@ -600,9 +817,65 @@ export function createBetaGateway(
           return reply({ connection: safe(row) }, 201, cors);
         }
       }
+      if (path === "/v1/access-keys" && request.method === "GET") {
+        return reply({ keys: await store.listKeys(user) }, 200, cors);
+      }
       if (path === "/v1/access-keys" && request.method === "POST") {
+        const options: KeyOptions = request.body === null
+          ? { name: "Agent key", grants: [] }
+          : keyOptionsSchema.parse(await input(request));
+        if (options.expiresAt && Date.parse(options.expiresAt) <= Date.now()) {
+          throw new ApiError("Select a future expiry time.");
+        }
+        if (options.grants !== null) {
+          const available = await store.accessible(user);
+          const connectionIds = new Set<string>();
+          for (const grant of options.grants) {
+            const connection = available.find((row) =>
+              row.id === grant.connectionId
+            );
+            if (
+              connectionIds.has(grant.connectionId) || !connection ||
+              grant.toolIds.some((id) =>
+                !connection.enabled_tools.includes(id) ||
+                !connection.tool_catalog.some((tool) => tool.id === id)
+              )
+            ) {
+              throw new ApiError(
+                "Select available connections and enabled tools.",
+              );
+            }
+            connectionIds.add(grant.connectionId);
+            grant.toolIds = [...new Set(grant.toolIds)];
+            if (grant.resources) {
+              validateSettings(connection.provider, grant.resources);
+              const limits = settingsSchema.parse(connection.settings);
+              if (connection.provider === "github") limits.repositories ??= [];
+              for (
+                const resource of ["repositories", "channels", "teams"] as const
+              ) {
+                const requested = grant.resources[resource],
+                  allowed = limits[resource];
+                if (
+                  requested && allowed &&
+                  requested.some((item) =>
+                    !allowed.some((value) =>
+                      resource === "repositories"
+                        ? value.toLowerCase() === item.toLowerCase()
+                        : value === item
+                    )
+                  )
+                ) {
+                  throw new ApiError(
+                    "Agent resources must remain within the connection's allowed scope.",
+                  );
+                }
+              }
+            }
+          }
+        }
         const token = random();
-        const id = await store.issue(user, token);
+        const id = await store.issue(user, token, options);
         return reply(
           {
             id,
@@ -651,9 +924,7 @@ export function createBetaGateway(
           if (value.bearerToken !== undefined && row.kind !== "mcp") {
             throw new ApiError("Use authorization for this account.");
           }
-          if (value.settings && row.provider !== "github") {
-            throw new ApiError("Repository settings apply to GitHub accounts.");
-          }
+          if (value.settings) validateSettings(row.provider, value.settings);
           const update: Partial<Connection> = {
             ...(value.name !== undefined ? { name: value.name } : {}),
             ...(value.settings ? { settings: value.settings } : {}),

@@ -11,7 +11,9 @@ export const gmailSearchInput = z.object({
 export interface ServiceConfig {
   enabledTools?: string[];
   slackToken?: string;
+  slackChannels?: string[];
   linearToken?: string;
+  linearTeams?: string[];
   gmailAccessToken?: string;
   gmailClientId?: string;
   gmailClientSecret?: string;
@@ -113,7 +115,17 @@ export function registerServices(
           throw new ServiceError("Slack is not configured.");
         }
         const url = new URL("https://slack.com/api/search.messages");
-        url.searchParams.set("query", query);
+        if (config.slackChannels?.length === 0) {
+          throw new ServiceError(
+            "No Slack channels are allowed for this connection.",
+          );
+        }
+        const scopedQuery = config.slackChannels
+          ? `(${query}) (${
+            config.slackChannels.map((channel) => `in:${channel}`).join(" OR ")
+          })`
+          : query;
+        url.searchParams.set("query", scopedQuery);
         url.searchParams.set("count", String(limit));
         const data = z.object({
           ok: z.boolean(),
@@ -137,7 +149,10 @@ export function registerServices(
             "Slack rejected the search. Check the user token and search:read permission.",
           );
         }
-        return data.messages.matches.slice(0, limit).map((message) => ({
+        return data.messages.matches.filter((message) =>
+          !config.slackChannels || (message.channel?.name !== undefined &&
+            config.slackChannels.includes(message.channel.name))
+        ).slice(0, limit).map((message) => ({
           text: message.text,
           timestamp: message.ts,
           url: message.permalink,
@@ -167,6 +182,14 @@ export function registerServices(
         if (!config.linearToken) {
           throw new ServiceError("Linear is not configured.");
         }
+        if (
+          config.linearTeams && (!config.linearTeams.length ||
+            (team && !config.linearTeams.includes(team)))
+        ) {
+          throw new ServiceError(
+            "This Linear team is outside the allowed scope.",
+          );
+        }
         const data = z.object({
           errors: z.array(z.unknown()).optional(),
           data: z.object({
@@ -177,6 +200,7 @@ export function registerServices(
                   title: z.string(),
                   url: z.string(),
                   state: z.object({ name: z.string() }).nullable(),
+                  team: z.object({ key: z.string() }).optional(),
                 }),
               ),
             }),
@@ -190,10 +214,14 @@ export function registerServices(
             },
             body: JSON.stringify({
               query:
-                "query SwarmIssues($first: Int!, $filter: IssueFilter) { issues(first: $first, orderBy: updatedAt, filter: $filter) { nodes { identifier title url state { name } } } }",
+                "query SwarmIssues($first: Int!, $filter: IssueFilter) { issues(first: $first, orderBy: updatedAt, filter: $filter) { nodes { identifier title url state { name } team { key } } } }",
               variables: {
                 first: limit,
-                filter: team ? { team: { key: { eq: team } } } : {},
+                filter: team
+                  ? { team: { key: { eq: team } } }
+                  : config.linearTeams
+                  ? { team: { key: { in: config.linearTeams } } }
+                  : {},
               },
             }),
           }),
@@ -203,7 +231,11 @@ export function registerServices(
             "Linear rejected the query. Check the API credential and issue permissions.",
           );
         }
-        return data.data.issues.nodes.slice(0, limit);
+        return data.data.issues.nodes.filter((issue) =>
+          !config.linearTeams ||
+          (issue.team !== undefined &&
+            config.linearTeams.includes(issue.team.key))
+        ).slice(0, limit).map(({ team: _team, ...issue }) => issue);
       }));
   }
 

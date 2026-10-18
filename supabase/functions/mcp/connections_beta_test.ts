@@ -57,13 +57,20 @@ function fixture(upstream?: typeof fetch) {
     swarm_user_mcp_keys: [],
     swarm_user_oauth_states: [],
     swarm_gmail_approvals: [],
+    swarm_activity: [],
   };
   const access: {
     available: boolean;
+    activityAvailable: boolean;
     member: boolean;
     ownerMember: boolean;
     afterRead?: () => void;
-  } = { available: true, member: true, ownerMember: true };
+  } = {
+    available: true,
+    activityAvailable: true,
+    member: true,
+    ownerMember: true,
+  };
   const shares = new Map<string, string[]>();
   const fetcher: typeof fetch = async (input, init) => {
     const request = new Request(input, init), url = new URL(request.url);
@@ -99,6 +106,9 @@ function fixture(upstream?: typeof fetch) {
       throw new Error("Unexpected external request.");
     }
     const table = url.pathname.split("/").at(-1)!;
+    if (table === "swarm_activity" && !access.activityAvailable) {
+      return Response.json({}, { status: 503 });
+    }
     if (url.pathname.includes("/rpc/")) {
       const body = await request.json();
       if (table === "swarm_user_key_owner") {
@@ -231,14 +241,19 @@ function fixture(upstream?: typeof fetch) {
     const rows = tables[table];
     const selected = rows.filter((row) =>
       [...url.searchParams].every(([key, value]) =>
-        key === "select" || String(row[key]) === value.slice(3)
+        ["select", "order", "limit"].includes(key) ||
+        (value.startsWith("gte.")
+          ? String(row[key]) >= value.slice(4)
+          : String(row[key]) === value.slice(3))
       )
     );
     if (request.method === "GET") {
       return Response.json(
         JSON.parse(
           JSON.stringify(
-            selected,
+            table === "swarm_activity"
+              ? selected.slice(-100).reverse()
+              : selected,
             (_key, node) =>
               node && typeof node === "object" && !Array.isArray(node)
                 ? Object.fromEntries(
@@ -267,6 +282,7 @@ function fixture(upstream?: typeof fetch) {
       endpoint_url: null,
       provider: null,
       revision: 0,
+      created_at: new Date().toISOString(),
       settings: {},
       tool_catalog: [],
       enabled_tools: [],
@@ -346,10 +362,24 @@ function fixture(upstream?: typeof fetch) {
     await store.saveCredential(row, { accessToken: `${name}-secret` }, name);
     return connection.id as string;
   };
-  const key = async (user: number) => {
-    const response = await api(user, "access-keys", "POST");
+  const key = async (user: number, legacy = true) => {
+    const response = await api(user, "access-keys", "POST", {
+      name: "Fixture key",
+      grants: legacy
+        ? []
+        : (await store.accessible(users[user])).map((row) => ({
+          connectionId: row.id,
+          toolIds: row.enabled_tools,
+        })),
+    });
     assertEquals(response.status, 201);
-    return await response.json();
+    const result = await response.json();
+    // Preserve the baseline scenarios with stored pre-migration keys.
+    if (legacy) {
+      tables.swarm_user_mcp_keys.find((key) => key.id === result.id)!.grants =
+        null;
+    }
+    return result;
   };
   return { tables, gateway, store, api, rpc, add, key, config, shares, access };
 }
@@ -837,7 +867,7 @@ Deno.test("a custom server that sends no response reaches the deadline", async (
 Deno.test("a personal key can discover and execute explicitly shared native tools", async () => {
   const f = fixture();
   const id = await f.add(0, "Shared");
-  const key = await f.key(1);
+  const key = await f.key(1, true);
   f.shares.set(id, ["github_list_pull_requests"]);
   const tools = await f.rpc(key.token, "tools/list");
   assert(
@@ -1152,6 +1182,10 @@ Deno.test("Gmail requires browser approval for the exact search and key, then pe
   const pending = JSON.parse(requested.result.content[0].text);
   assertEquals(new URL(pending.approvalUrl).origin, "https://swarm.test");
   assertEquals(gmailReads, 0);
+  const activity = await (await f.api(0, "activity")).json();
+  assertEquals(activity.events[0].outcome, "approval_required");
+  assertEquals(activity.events[0].toolId, "gmail_search");
+  assert(!JSON.stringify(activity).includes(args.query));
   const requestId = pending.approvalId;
   assertEquals((await f.api(1, `gmail-approvals/${requestId}`)).status, 404);
   const preview = await (await f.api(0, `gmail-approvals/${requestId}`)).json();
@@ -1248,4 +1282,528 @@ Deno.test("Gmail denies expired, rejected, changed, and revoked access without c
     const result = await call({ ...args, approval_id: id });
     assert(result.status === 401 || result.result.isError, scenario);
   }
+});
+
+Deno.test("scoped agent keys expose only selected connections and refuse other accounts before upstream requests", async () => {
+  let reads = 0;
+  const f = fixture(() => {
+    reads++;
+    return Promise.resolve(Response.json([]));
+  });
+  const selected = await f.add(0, "Selected account");
+  const other = await f.add(0, "Other account");
+  const foreign = await f.add(1, "Foreign account");
+  const response = await f.api(0, "access-keys", "POST", {
+    name: "Research agent",
+    grants: [{
+      connectionId: selected,
+      toolIds: ["github_list_pull_requests"],
+    }],
+    expiresAt: new Date(Date.now() + 3600000).toISOString(),
+  });
+  assertEquals(response.status, 201);
+  const key = await response.json();
+  const status = await f.rpc(key.token, "tools/call", {
+    name: "hub_status",
+    arguments: {},
+  });
+  const metadata = JSON.parse(status.result.content[0].text);
+  assertEquals(metadata.connections.map((row: { id: string }) => row.id), [
+    selected,
+  ]);
+  const inventory = await (await f.api(0, "access-keys")).json();
+  assertEquals(inventory.keys[0].name, "Research agent");
+  assertEquals(inventory.keys[0].grants, [{
+    connectionId: selected,
+    toolIds: ["github_list_pull_requests"],
+  }]);
+  assert(!JSON.stringify(inventory).includes(key.token));
+  assert(!JSON.stringify(inventory).includes("token_hash"));
+  assertEquals((await (await f.api(1, "access-keys")).json()).keys, []);
+  const deniedOther = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", connection_id: other },
+  });
+  assertEquals(deniedOther.result.isError, true);
+  const deniedForeign = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", connection_id: foreign },
+  });
+  assertEquals(deniedForeign.result.isError, true);
+  assertEquals(reads, 0);
+  const accepted = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", connection_id: selected },
+  });
+  assertEquals(accepted.result.isError, undefined);
+  assertEquals(reads, 1);
+  f.tables.swarm_user_mcp_keys[0].expires_at = new Date(0).toISOString();
+  assertEquals((await f.rpc(key.token, "tools/list")).status, 401);
+  assertEquals(reads, 1);
+});
+
+Deno.test("empty agent grants deny tools and invalid grants cannot issue credentials", async () => {
+  const f = fixture(() => {
+    throw new Error("No upstream request is allowed.");
+  });
+  const own = await f.add(0, "Own"), foreign = await f.add(1, "Foreign");
+  assertEquals(
+    (await f.api(0, "access-keys", "POST", {
+      name: "Foreign",
+      grants: [{
+        connectionId: foreign,
+        toolIds: ["github_list_pull_requests"],
+      }],
+    })).status,
+    400,
+  );
+  assertEquals(
+    (await f.api(0, "access-keys", "POST", {
+      name: "Unknown",
+      grants: [{ connectionId: own, toolIds: ["unknown_tool"] }],
+    })).status,
+    400,
+  );
+  assertEquals(
+    (await f.api(0, "access-keys", "POST", {
+      name: "Expired",
+      grants: [],
+      expiresAt: new Date(0).toISOString(),
+    })).status,
+    400,
+  );
+  const key = await (await f.api(0, "access-keys", "POST", {
+    name: "No access",
+    grants: [],
+  })).json();
+  assertEquals(
+    (await f.rpc(key.token, "tools/list")).result.tools.map((
+      t: { name: string },
+    ) => t.name),
+    ["hub_status"],
+  );
+  const denied = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project" },
+  });
+  assertEquals(denied.result.isError, true);
+});
+
+Deno.test("agent grant withdrawal and key revocation block later provider requests", async () => {
+  let reads = 0, refreshes = 0;
+  const f = fixture((input) => {
+    if (new URL(String(input)).hostname !== "github.com") {
+      reads++;
+      return Promise.resolve(Response.json([]));
+    }
+    refreshes++;
+    f.tables.swarm_user_mcp_keys[0].grants = [];
+    return Promise.resolve(
+      Response.json({ access_token: "refreshed-fixture", expires_in: 3600 }),
+    );
+  });
+  const own = await f.add(0, "Own");
+  await f.store.saveCredential(await f.store.get(users[0], own), {
+    accessToken: "expired-fixture",
+    refreshToken: "refresh-fixture",
+    expiresAt: 1,
+  }, "Own");
+  const key = await (await f.api(0, "access-keys", "POST", {
+    name: "Scoped",
+    grants: [{ connectionId: own, toolIds: ["github_list_pull_requests"] }],
+  })).json();
+  const denied = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "project", limit: 15 },
+  });
+  assertEquals(denied.result.isError, true);
+  assertEquals(reads, 0);
+  assertEquals(refreshes, 1);
+  assertEquals((await f.api(0, `access-keys/${key.id}`, "DELETE")).status, 204);
+  assertEquals((await f.rpc(key.token, "tools/list")).status, 401);
+});
+
+Deno.test("scoped custom agent keys cannot discover or call ungranted tools", async () => {
+  let calls = 0;
+  const f = fixture(protocolFixture({
+    beforeCall: () => {
+      calls++;
+      return Promise.resolve();
+    },
+  }));
+  const { connection } = await (await f.api(0, "connections", "POST", {
+    kind: "mcp",
+    name: "Scoped server",
+    endpointUrl: "https://fixture.example/mcp",
+  })).json();
+  const { tools } =
+    await (await f.api(0, `connections/${connection.id}/discover`, "POST"))
+      .json();
+  await (await f.api(0, `connections/${connection.id}`, "PATCH", {
+    enabledTools: tools.map((tool: { id: string }) => tool.id),
+  })).body?.cancel();
+  const key = await (await f.api(0, "access-keys", "POST", {
+    name: "Single tool",
+    grants: [{ connectionId: connection.id, toolIds: [tools[0].id] }],
+  })).json();
+  assertEquals(
+    (await f.rpc(key.token, "tools/list")).result.tools.map((
+      tool: { name: string },
+    ) => tool.name).sort(),
+    ["hub_status", tools[0].id].sort(),
+  );
+  const denied = await f.rpc(key.token, "tools/call", {
+    name: tools[1].id,
+    arguments: {},
+  });
+  assert(denied.error || denied.result?.isError);
+  assertEquals(calls, 0);
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", { name: tools[0].id, arguments: {} }))
+      .result.isError,
+    undefined,
+  );
+  assertEquals(calls, 1);
+});
+
+Deno.test("shared connection metadata supports scoped agent keys without revealing private settings", async () => {
+  const f = fixture();
+  const shared = await f.add(0, "Shared private account");
+  f.shares.set(shared, ["github_list_pull_requests"]);
+  const inventory = await (await f.api(1, "connections")).json();
+  assertEquals(inventory.connections, []);
+  assertEquals(inventory.accessConnections[0].id, shared);
+  assertEquals(inventory.accessConnections[0].enabledTools, [
+    "github_list_pull_requests",
+  ]);
+  assert(!JSON.stringify(inventory.accessConnections).includes("repositories"));
+  assert(!JSON.stringify(inventory.accessConnections).includes("accountLabel"));
+  assert(!JSON.stringify(inventory.accessConnections).includes("endpoint"));
+  assert(!JSON.stringify(inventory.accessConnections).includes("secret"));
+  const key = await (await f.api(1, "access-keys", "POST", {
+    name: "Shared agent",
+    grants: [{ connectionId: shared, toolIds: ["github_list_pull_requests"] }],
+  })).json();
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project", connection_id: shared },
+    })).result.isError,
+    undefined,
+  );
+});
+
+Deno.test("per-key resource restrictions can narrow but cannot widen connection permissions", async () => {
+  let reads = 0;
+  const f = fixture(() => {
+    reads++;
+    return Promise.resolve(Response.json([]));
+  });
+  const id = await f.add(0, "Resources");
+  const changed = await f.api(0, `connections/${id}`, "PATCH", {
+    settings: { repositories: ["demo/project", "demo/other"] },
+  });
+  await changed.body?.cancel();
+  const response = await f.api(0, "access-keys", "POST", {
+    name: "One repository",
+    grants: [{
+      connectionId: id,
+      toolIds: ["github_list_pull_requests"],
+      resources: { repositories: ["demo/project"] },
+    }],
+  });
+  assertEquals(response.status, 201);
+  const key = await response.json();
+  const denied = await f.rpc(key.token, "tools/call", {
+    name: "github_list_pull_requests",
+    arguments: { owner: "demo", repo: "other" },
+  });
+  assertEquals(denied.result.isError, true);
+  assertEquals(reads, 0);
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project" },
+    })).result.isError,
+    undefined,
+  );
+  assertEquals(reads, 1);
+  assertEquals(
+    (await f.api(0, "access-keys", "POST", {
+      name: "Wider",
+      grants: [{
+        connectionId: id,
+        toolIds: ["github_list_pull_requests"],
+        resources: { repositories: ["demo/foreign"] },
+      }],
+    })).status,
+    400,
+  );
+  await (await f.api(0, `connections/${id}`, "PATCH", {
+    settings: { repositories: ["demo/other"] },
+  })).body?.cancel();
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project" },
+    })).result.isError,
+    true,
+  );
+  assertEquals(reads, 1);
+});
+
+Deno.test("activity records tool outcomes and denies execution when durable logging fails", async () => {
+  let reads = 0, broken = false;
+  const f = fixture(() => {
+    reads++;
+    return Promise.resolve(
+      Response.json(broken ? {} : [], { status: broken ? 500 : 200 }),
+    );
+  });
+  const id = await f.add(0, "Activity");
+  const key = await (await f.api(0, "access-keys", "POST", {
+    name: "Audited",
+    grants: [{ connectionId: id, toolIds: ["github_list_pull_requests"] }],
+  })).json();
+  const name = "github_list_pull_requests";
+  await f.rpc(key.token, "tools/call", {
+    name,
+    arguments: { owner: "demo", repo: "project" },
+  });
+  broken = true;
+  await f.rpc(key.token, "tools/call", {
+    name,
+    arguments: { owner: "demo", repo: "project" },
+  });
+  await f.rpc(key.token, "tools/call", {
+    name,
+    arguments: { owner: "private-query", repo: "private-secret" },
+  });
+  await f.rpc(key.token, "tools/call", {
+    name: "private-attacker-payload",
+    arguments: { token: "private-secret" },
+  });
+  const activity = await (await f.api(0, "activity")).json();
+  assertEquals(activity.events.length, 4);
+  assert(
+    activity.events.some((event: { outcome: string; reason: string }) =>
+      event.outcome === "allowed" && event.reason === "completed"
+    ),
+  );
+  assert(
+    activity.events.some((event: { outcome: string }) =>
+      event.outcome === "failed"
+    ),
+  );
+  assert(
+    activity.events.some((event: { outcome: string }) =>
+      event.outcome === "denied"
+    ),
+  );
+  assert(!JSON.stringify(activity).includes("private-"));
+  assert(!JSON.stringify(activity).includes(key.token));
+  assertEquals((await (await f.api(1, "activity")).json()).events, []);
+  assertEquals(reads, 2);
+  f.access.activityAvailable = false;
+  const refused = await f.rpc(key.token, "tools/call", {
+    name,
+    arguments: { owner: "demo", repo: "project" },
+  });
+  assertEquals(refused.status, 503);
+  assertEquals(reads, 2);
+});
+
+Deno.test("creating an agent key without a payload grants no access", async () => {
+  const f = fixture(() => {
+    throw new Error("No provider request is permitted.");
+  });
+  await f.add(0, "Unselected account");
+  const key = await (await f.api(0, "access-keys", "POST")).json();
+  assertEquals(f.tables.swarm_user_mcp_keys[0].grants, []);
+  assertEquals(
+    (await f.rpc(key.token, "tools/list")).result.tools.map((
+      tool: { name: string },
+    ) => tool.name),
+    ["hub_status"],
+  );
+});
+
+Deno.test("activity returns at most 100 recent owner events", async () => {
+  const f = fixture();
+  const make = (user: string, created: string) => ({
+    id: crypto.randomUUID(),
+    user_id: user,
+    key_id: crypto.randomUUID(),
+    connection_id: null,
+    tool_id: null,
+    outcome: "denied",
+    reason: "tool_unavailable",
+    created_at: created,
+  });
+  f.tables.swarm_activity.push(
+    ...Array.from(
+      { length: 101 },
+      () => make(users[0], new Date().toISOString()),
+    ),
+  );
+  f.tables.swarm_activity.push(
+    make(users[0], new Date(Date.now() - 31 * 86400000).toISOString()),
+  );
+  f.tables.swarm_activity.push(make(users[1], new Date().toISOString()));
+  const result = await (await f.api(0, "activity")).json();
+  assertEquals(result.events.length, 100);
+  assert(
+    result.events.every((event: { createdAt: string }) =>
+      Date.parse(event.createdAt) > Date.now() - 30 * 86400000
+    ),
+  );
+  assertEquals((await (await f.api(1, "activity")).json()).events.length, 1);
+});
+
+Deno.test("a per-key Slack channel limit narrows provider queries and response data", async () => {
+  let query = "", reads = 0;
+  const f = fixture((input) => {
+    reads++;
+    query = new URL(String(input)).searchParams.get("query") ?? "";
+    return Promise.resolve(Response.json({
+      ok: true,
+      messages: {
+        matches: [
+          { text: "Visible", ts: "1", channel: { name: "general" } },
+          { text: "Hidden", ts: "2", channel: { name: "engineering" } },
+        ],
+      },
+    }));
+  });
+  const { connection } = await (await f.api(0, "connections", "POST", {
+    kind: "native",
+    provider: "slack",
+    name: "Slack",
+    settings: { channels: ["general", "engineering"] },
+  })).json();
+  await f.store.saveCredential(await f.store.get(users[0], connection.id), {
+    accessToken: "slack-fixture",
+  }, "Slack");
+  const response = await f.api(0, "access-keys", "POST", {
+    name: "One channel",
+    grants: [{
+      connectionId: connection.id,
+      toolIds: ["slack_search"],
+      resources: { channels: ["general"] },
+    }],
+  });
+  assertEquals(response.status, 201);
+  const key = await response.json();
+  const result = await f.rpc(key.token, "tools/call", {
+    name: "slack_search",
+    arguments: { query: "sensitive-query" },
+  });
+  assertEquals(
+    JSON.parse(result.result.content[0].text).map((row: { text: string }) =>
+      row.text
+    ),
+    ["Visible"],
+  );
+  assertStringIncludes(query, "in:general");
+  assert(!query.includes("in:engineering"));
+  assertEquals(reads, 1);
+  const events = await (await f.api(0, "activity")).json();
+  assert(!JSON.stringify(events).includes("sensitive-query"));
+});
+
+Deno.test("a per-key Linear team limit rejects other teams before provider requests", async () => {
+  let reads = 0;
+  const f = fixture(() => {
+    reads++;
+    return Promise.resolve(Response.json({
+      data: {
+        issues: {
+          nodes: [
+            {
+              identifier: "ENG-1",
+              title: "Visible",
+              url: "https://linear.app/1",
+              state: null,
+              team: { key: "ENG" },
+            },
+            {
+              identifier: "DESIGN-1",
+              title: "Hidden",
+              url: "https://linear.app/2",
+              state: null,
+              team: { key: "DESIGN" },
+            },
+          ],
+        },
+      },
+    }));
+  });
+  const { connection } = await (await f.api(0, "connections", "POST", {
+    kind: "native",
+    provider: "linear",
+    name: "Linear",
+    settings: { teams: ["ENG", "DESIGN"] },
+  })).json();
+  await f.store.saveCredential(await f.store.get(users[0], connection.id), {
+    accessToken: "linear-fixture",
+  }, "Linear");
+  const key = await (await f.api(0, "access-keys", "POST", {
+    name: "One team",
+    grants: [{
+      connectionId: connection.id,
+      toolIds: ["linear_list_issues"],
+      resources: { teams: ["ENG"] },
+    }],
+  })).json();
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "linear_list_issues",
+      arguments: { team: "DESIGN" },
+    })).result.isError,
+    true,
+  );
+  assertEquals(reads, 0);
+  const result = await f.rpc(key.token, "tools/call", {
+    name: "linear_list_issues",
+    arguments: {},
+  });
+  assertEquals(
+    JSON.parse(result.result.content[0].text).map((
+      row: { identifier: string },
+    ) => row.identifier),
+    ["ENG-1"],
+  );
+  assertEquals(reads, 1);
+});
+
+Deno.test("a shared GitHub key cannot add repositories when the owner removes the allowlist", async () => {
+  let reads = 0;
+  const f = fixture(() => {
+    reads++;
+    return Promise.resolve(Response.json([]));
+  });
+  const id = await f.add(0, "Shared GitHub");
+  f.shares.set(id, ["github_list_pull_requests"]);
+  const options = {
+    name: "Repository agent",
+    grants: [{
+      connectionId: id,
+      toolIds: ["github_list_pull_requests"],
+      resources: { repositories: ["demo/project"] },
+    }],
+  };
+  const initial = await f.api(1, "access-keys", "POST", options);
+  assertEquals(initial.status, 201);
+  const key = await initial.json();
+  await (await f.api(0, `connections/${id}`, "PATCH", { settings: {} })).body
+    ?.cancel();
+  assertEquals((await f.api(1, "access-keys", "POST", options)).status, 400);
+  assertEquals(
+    (await f.rpc(key.token, "tools/call", {
+      name: "github_list_pull_requests",
+      arguments: { owner: "demo", repo: "project", connection_id: id },
+    })).result.isError,
+    true,
+  );
+  assertEquals(reads, 0);
 });
