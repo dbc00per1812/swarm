@@ -9,7 +9,7 @@
     <meta name="description"
       content="How Swarm handles account information, service credentials, tool results, and deletion requests.">
     <title>Privacy policy — Swarm</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=application-20261018">
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
@@ -18,7 +18,7 @@
       <p class="eyebrow">YOUR DATA</p>
       <h1>Privacy policy</h1>
       <p
-        id="publication-status">Effective date: <time datetime="2026-10-16">16 October 2026</time>.</p>
+        id="publication-status">Effective date: <time datetime="2026-10-18">18 October 2026</time>.</p>
       <p
         class="intro">This policy describes Swarm's current preview. Gmail connections remain limited to approved Google test users.</p>
       <nav aria-label="Privacy policy sections">
@@ -39,6 +39,17 @@
         <p>Custom server connections also store the server address, discovered tool schemas, and any saved authentication credential.</p>
         <p>Swarm encrypts saved service credentials. Access tokens permit service requests. Refresh tokens can obtain replacement access tokens after expiry.</p>
         <p>Organization features store names, member identifiers, invitation records, selected tool shares, and audit records of organization changes.</p>
+        <p>Agent keys store names, permission grants, optional expiry dates, token hashes, and revocation records. Key audit records contain identifiers, times, and permission counts.</p>
+      </section>
+      <section class="service" aria-labelledby="vault">
+        <h2 id="vault">Personal vault and request history</h2>
+        <p>The personal vault stores an encrypted document on Supabase. Your browser encrypts item names, provider labels, environments, keys, and notes before transmission.</p>
+        <p>Your vault passphrase and derived encryption key stay in the browser. Swarm's server does not receive them.</p>
+        <p>The server stores ciphertext, encryption parameters, a revision number, and update times. Vault audit records contain account identifiers, actions, revisions, and times.</p>
+        <p>The vault locks after five idle minutes, when its tab becomes hidden, when you leave Vault, and when you sign out.</p>
+        <p>Swarm cannot recover a lost vault passphrase. A compromised browser can read an unlocked vault. The vault has no independent security audit.</p>
+        <p>Personal vault storage is separate from connected-service credentials. The gateway can decrypt connected-service credentials to make authorized provider requests.</p>
+        <p>Request history stores account, connection, key, tool, time, outcome, and reason identifiers. It excludes credentials, tool arguments, search queries, and provider results.</p>
       </section>
       <section class="service" aria-labelledby="browser">
         <h2 id="browser">Browser storage</h2>
@@ -110,6 +121,10 @@
         <p>Historical credential copies and the import marker have no automatic expiry. They require separate operator handling.</p>
         <p>Team audit records retain identifiers after account, connection, or organization deletion. They have no automatic expiry.</p>
         <p>Revoking an agent key prevents its future use. Its hash and revocation record remain until account deletion or separate operator handling.</p>
+        <p>Vault ciphertext remains until replacement or account deletion. Vault audit records retain identifiers and revisions without automatic expiry or account-deletion removal.</p>
+        <p>Deleting a vault item replaces the encrypted document. This does not prove removal from historical copies or hosting backups.</p>
+        <p>Activity shows the latest 100 records from the previous 30 days. Each new record removes that account's activity older than 30 days.</p>
+        <p>Inactive accounts can retain older activity until their next request. Account deletion removes activity and agent key audit records.</p>
         <p>Expired user authorization records cannot complete authorization. They can remain until later cleanup or connection removal.</p>
         <p>For account or historical-data deletion, contact the privacy address. We will verify account control and check the relevant records.</p>
         <p>We will report the deletion result and identify any known retained copies or retention reasons.</p>
@@ -132,7 +147,8 @@
           <li>To stop a tool, clear its selection and select Save tools.</li>
           <li>To stop organization access, withdraw the tool share.</li>
           <li>To remove an active connection, select Remove on its account card.</li>
-          <li>To stop an agent key, select Revoke key.</li>
+          <li>To stop an agent key, open Agent access and select that key's Revoke button.</li>
+          <li>To remove a personal vault item, unlock Vault, select the item, and select Delete item.</li>
           <li>To revoke Google's grant, remove Swarm from your <a href="https://myaccount.google.com/connections">Google Account connections</a>.</li>
           <li>To request account or historical-data deletion, contact the privacy address.</li>
         </ol>
