@@ -5,27 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
     <meta http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
-    <title>Swarm — Your connections</title>
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; img-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+    <title>Swarm — Workspace</title>
+    <link rel="icon" type="image/svg+xml" href="icons/layers-2.svg">
     <link rel="stylesheet" href="styles.css">
-    <script defer src="dist/app.js?v=gmail-approval-20261016"></script>
+    <script defer src="dist/app.js?v=application-20261017"></script>
   </head>
   <body>
     <a href="#main" class="skip-link">Skip to content</a>
-    <header><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> SWARM</a><span class="tag">CONNECTIONS BETA</span></header>
+    <header class="app-header"><a href="./" class="brand" aria-label="Swarm home"><span aria-hidden="true">◈</span> Swarm</a><span class="tag">Your agents. Your access.</span><a href="privacy.html" class="header-link">Privacy</a></header>
     <main id="main">
-      <p class="eyebrow">ONE CONNECTION FOR YOUR AGENTS</p>
-      <h1>Your tools.<br>Your connections.</h1>
-      <p
-        class="intro">Connect your accounts once. Choose the tools your agents can use.</p>
-      <section aria-labelledby="about-title">
-        <h2 id="about-title">What Swarm does</h2>
-        <p>Swarm gives agents selected tools for GitHub pull requests, Slack message search, Linear issues, and Gmail search.</p>
-        <p>You choose the connected accounts and enabled tools. You can also share selected tools with organization members.</p>
-        <p>Swarm stores service credentials on its server. It sends tool results to the requesting agent.</p>
-        <p>GitHub provides Swarm account sign-in. Google authorization connects Gmail separately.</p>
-        <p>Gmail is currently available only to approved Google test users. <a href="gmail-data.html">Read about Gmail data use and access removal</a>.</p>
-      </section>
+      <div class="welcome"><h1>Your tools, under your control.</h1><p class="intro">Connect accounts, protect keys, and choose what each agent can access.</p></div>
       <p id="notice" role="status" aria-live="polite"
         aria-atomic="true">Loading Swarm…</p>
       <p id="error" role="alert" aria-atomic="true"></p>
@@ -50,12 +40,29 @@
       </section>
       <section id="connections-panel" hidden
         aria-labelledby="connections-title">
-        <div
-          class="section-heading"><h2 id="connections-title">Your connections</h2><button id="signout" class="quiet" type="button">Sign out</button></div>
+        <aside class="workspace-nav" aria-label="Workspace navigation">
+          <div class="workspace-identity"><strong>Personal workspace</strong><span>Access for your agents</span></div>
+          <button type="button" data-view="connectors" aria-current="page"><img src="icons/plug.svg" alt="" aria-hidden="true"> Connectors</button>
+          <button type="button" data-view="vault"><img src="icons/vault.svg" alt="" aria-hidden="true"> Vault</button>
+          <button type="button" data-view="agents"><img src="icons/bot.svg" alt="" aria-hidden="true"> Agent access</button>
+          <button type="button" data-view="activity"><img src="icons/history.svg" alt="" aria-hidden="true"> Activity</button>
+          <button type="button" data-view="organizations"><img src="icons/users.svg" alt="" aria-hidden="true"> Organizations</button>
+          <div class="nav-bottom"><p>Access starts with you.</p><p class="muted">Choose accounts and tools for each agent.</p><button id="signout" class="quiet" type="button">Sign out</button></div>
+        </aside>
+        <div class="workspace-content">
+        <div class="workspace-heading"><div><h1 id="workspace-title">Connectors</h1><p class="muted" id="connections-title">Manage the tools your agents can use.</p></div><div class="workspace-heading-actions"><div id="refresh-slot"></div><button type="button" id="add-connector">+ Add connector</button></div></div>
+        <div id="connectors-view">
+        <div class="connector-toolbar">
+          <div class="connector-search"><label for="connector-search">Search connectors</label><input id="connector-search" type="search" placeholder="Search connectors…"></div>
+          <div class="segmented-control" role="group" aria-label="Connector list"><button type="button" id="show-connected" aria-pressed="true">Connected</button><button type="button" id="show-catalog" aria-pressed="false">Catalog</button></div>
+        </div>
+        <div id="connected-accounts" class="connector-split">
+          <div class="account-list-panel"><div class="list-caption"><h2>Connected accounts</h2><span id="account-count" class="muted">0</span></div><div id="connection-list" aria-label="Connected accounts"></div></div>
+          <div class="account-inspector"><p id="no-account" class="empty-state" hidden>Select a connection to manage its access.</p><div id="services"></div></div>
+        </div>
         <p id="empty" class="muted"
           hidden>Add an account or a custom MCP server to get started.</p>
-        <section class="service" aria-labelledby="gmail-data-title">
-          <h2 id="gmail-data-title">Before you connect Gmail</h2>
+        <details class="data-disclosure"><summary id="gmail-data-title">Gmail access and data use</summary>
           <p
             class="muted">Swarm searches Gmail on its server. It returns message IDs and the Subject, From, and Date headers to agents with your key.</p>
           <p
@@ -63,11 +70,17 @@
           <p
             class="muted">Google grants read access to messages and settings. The current tool does not fetch message bodies or attachments.</p>
           <p><a href="gmail-data.html">Read about Gmail data use and access removal</a></p>
-        </section>
+        </details>
         <section id="gmail-search-review" class="service" tabindex="-1"
           aria-label="Gmail search approval" hidden></section>
-        <div id="services"></div>
-        <section class="service" aria-labelledby="custom-title">
+        <section id="browse-connectors" aria-labelledby="catalog-title" hidden>
+          <div class="section-heading"><h2 id="catalog-title">Browse connectors</h2><span class="muted">Native connections and MCP setup</span></div>
+          <div class="catalog-filters"><label for="connector-category">Category</label><select id="connector-category"><option value="">All categories</option><option>Development</option><option>Communication</option><option>Projects</option><option>Knowledge</option><option>Design</option><option>Payments</option></select></div>
+          <div class="connector-split catalog-split">
+          <div id="connector-catalog" aria-label="Connector catalog"></div><section id="catalog-detail" class="catalog-inspector" aria-label="Connector details"></section></div>
+          <p class="muted">MCP means Model Context Protocol. It connects agents to tools. OAuth setup guides identify services awaiting Swarm authorization support.</p>
+        </section>
+        <details class="custom-setup" id="custom-setup"><summary>Add a custom MCP server</summary><section aria-labelledby="custom-title">
           <h3 id="custom-title">Add a custom MCP server</h3>
           <p
             class="muted">Connect a hosted HTTPS server with optional bearer authentication. Select tools after discovery.</p>
@@ -79,6 +92,11 @@
             <button type="submit">Add MCP server</button>
           </form>
         </section>
+        </details>
+        </div>
+        <div id="vault-view" hidden><section id="vault-panel" aria-label="Personal vault"></section></div>
+        <div id="activity-view" hidden><section id="activity-panel" aria-label="Agent request history"></section></div>
+        <div id="organizations-view" hidden>
         <section id="teams-panel" aria-labelledby="teams-title" hidden>
           <div
             class="section-heading"><h2 id="teams-title">Your organizations</h2><button id="refresh-teams" class="quiet" type="button">Refresh organizations</button></div>
@@ -92,11 +110,13 @@
           <section id="team-detail" tabindex="-1"
             aria-label="Organization details"></section>
         </section>
+        </div>
+        <div id="agents-view" hidden>
         <section class="agent-panel" aria-labelledby="agent-title">
           <h2 id="agent-title">Connect an agent</h2>
-          <p>All agents with your key can use your enabled tools and tools shared with your organizations.</p>
+          <p>Select the accounts and tools each agent can use. Set an expiry date when access is temporary.</p><div id="agent-scope-editor"></div>
           <label for="endpoint">Swarm MCP address</label><input id="endpoint" readonly>
-          <div class="actions"><button id="copy-endpoint" class="quiet" type="button">Copy MCP address</button><button id="create-key" type="button">Create agent key</button></div>
+          <div class="actions"><button id="copy-endpoint" class="quiet" type="button">Copy MCP address</button></div>
           <div id="new-key" hidden>
             <p class="muted">Copy this key now. Swarm shows it only until you leave this page. Keep it private.</p>
             <label for="raw-key">Raw agent token</label><input id="raw-key" type="password" readonly autocomplete="off">
@@ -104,8 +124,10 @@
             <p class="muted">Paste the JSON configuration into an MCP client that supports HTTP and Authorization headers. The configuration includes the Bearer prefix.</p>
           </div>
           <div id="keys"></div>
-          <p class="muted">This browser remembers key IDs for revocation. It does not save raw keys. Revoking a key stops its next request.</p>
+          <p class="muted">Swarm stores key records on the server. Raw keys appear only when created. Revoking a key stops its next request.</p>
         </section>
+        </div>
+        </div>
       </section>
       <noscript>Enable JavaScript to use Swarm Connections.</noscript>
     </main>
@@ -124,7 +146,7 @@
         class="actions"><button id="gmail-consent-cancel" type="button" class="quiet" autofocus>Cancel Gmail connection</button><button id="gmail-consent-continue" type="button">Continue to Google</button></div>
     </dialog>
     <footer>
-      <p>Your service credentials stay on the Swarm server. Agents receive tool results.</p>
+      <p>Connector credentials stay on the server. Personal vault items use encryption in your browser.</p>
       <a href="privacy.html">Privacy policy</a>
       <a href="gmail-data.html">Gmail data use and access removal</a>
     </footer>

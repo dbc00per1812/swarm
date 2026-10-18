@@ -37,6 +37,7 @@ async function page(
   intercept = () => undefined,
   fragment = "",
   savedSession = [],
+  savedKeys = [],
 ) {
   const dom = new JSDOM(await readFile("web/index.html", "utf8"), {
     url: "https://fixture.test/swarm/" + fragment,
@@ -45,6 +46,8 @@ async function page(
   });
   const w = dom.window;
   const connections = structuredClone(initial);
+  const keys = structuredClone(savedKeys);
+  let keyOptions;
   let revoked = false;
   Object.assign(w, {
     TextEncoder,
@@ -77,6 +80,7 @@ async function page(
       if (path === "/v1/organizations") {
         return Response.json({ organizations: [] });
       }
+      if (path === "/v1/vault") return Response.json({ vault: null });
       if (path === "/v1/connections") {
         return Response.json({ connections, endpointUrl: endpoint });
       }
@@ -85,7 +89,19 @@ async function page(
         Object.assign(item, JSON.parse(options.body));
         return Response.json({ connection: item });
       }
+      if (path === "/v1/access-keys" && options.method === "GET") {
+        return Response.json({ keys });
+      }
       if (path === "/v1/access-keys" && options.method === "POST") {
+        keyOptions = JSON.parse(options.body);
+        keys.push({
+          id: "new-key",
+          name: keyOptions.name,
+          grants: keyOptions.grants,
+          expiresAt: keyOptions.expiresAt ?? null,
+          revokedAt: null,
+          legacy: false,
+        });
         return Response.json({
           id: "new-key",
           token: "fixture-private-key",
@@ -102,6 +118,8 @@ async function page(
       }
       if (path === "/v1/access-keys/new-key" && options.method === "DELETE") {
         revoked = true;
+        keys.find((key) => key.id === "new-key").revokedAt = new Date()
+          .toISOString();
         return new Response(null, { status: 204 });
       }
       throw new Error(`Unexpected fixture route: ${path}`);
@@ -135,6 +153,8 @@ async function page(
   return {
     w,
     connections,
+    keys,
+    keyOptions: () => keyOptions,
     revoked: () => revoked,
     close: () => dom.window.close(),
   };
@@ -149,6 +169,10 @@ async function until(check) {
   }
 }
 function click(w, text) {
+  if (text === "Create agent key") {
+    w.document.querySelector('[data-view="agents"]').click();
+    w.document.getElementById("agent-key-name").value = "Test agent";
+  }
   const b = [...w.document.querySelectorAll("button")].find((b) =>
     b.textContent === text
   );
@@ -263,7 +287,7 @@ test("A user signs in, manages two accounts, saves agent setup, and signs out", 
         v.includes("fixture-private-key")
       ),
     );
-    click(p.w, "Revoke key");
+    click(p.w, "Revoke Test agent");
     await until(p.revoked);
     click(p.w, "Sign out");
     await until(() => p.w.document.querySelector("#connections-panel").hidden);
@@ -275,22 +299,26 @@ test("A user signs in, manages two accounts, saves agent setup, and signs out", 
 
 test("Reload restores the user session and key controls without restoring the raw key", async () => {
   const p = await page();
-  let saved;
+  let saved, savedKeys;
   try {
     await signIn(p.w);
     click(p.w, "Create agent key");
     await until(() => !p.w.document.querySelector("#new-key").hidden);
     saved = Object.entries(p.w.localStorage);
+    savedKeys = structuredClone(p.keys);
   } finally {
     p.close();
   }
-  const next = await page(saved);
+  const next = await page(saved, undefined, "", [], savedKeys);
   try {
     await until(() =>
       next.w.document.querySelectorAll("article.service").length === 2
     );
     assert.ok(next.w.document.querySelector("#new-key").hidden);
-    click(next.w, "Revoke key");
+    await until(() =>
+      next.w.document.querySelector("#keys").textContent.includes("Test agent")
+    );
+    click(next.w, "Revoke Test agent");
     await until(next.revoked);
   } finally {
     next.close();
@@ -299,8 +327,8 @@ test("Reload restores the user session and key controls without restoring the ra
 
 test("A key response from an earlier session cannot reveal or save the key after sign-in", async () => {
   let release, pending = false;
-  const p = await page(undefined, (path) => {
-    if (path !== "/v1/access-keys") return;
+  const p = await page(undefined, (path, options) => {
+    if (path !== "/v1/access-keys" || options.method !== "POST") return;
     return {
       ok: true,
       status: 201,
@@ -439,7 +467,7 @@ test("A browser storage failure keeps the new token and revocation control avail
       "fixture-private-key",
     );
     assert.equal(p.w.document.querySelector("#new-key").hidden, false);
-    click(p.w, "Revoke key");
+    click(p.w, "Revoke Test agent");
     await until(p.revoked);
     await until(() => p.w.document.querySelector("#new-key").hidden);
   } finally {
@@ -728,5 +756,70 @@ test("Swarm refuses connection and approval controls inside a frame", async () =
     );
   } finally {
     dom.window.close();
+  }
+});
+
+test("Agent keys start with no tool access and submit only selected connection grants", async () => {
+  const p = await page();
+  try {
+    await signIn(p.w);
+    const form = p.w.document.querySelector("#agent-scope-editor form");
+    const boxes = [...form.querySelectorAll('input[type="checkbox"]')];
+    assert.equal(boxes.length, 2);
+    assert.ok(boxes.every((box) => !box.checked));
+    assert.equal(
+      form.querySelector("label[for=agent-key-name]").textContent,
+      "Agent key name",
+    );
+    boxes[0].checked = true;
+    boxes[0].dispatchEvent(new p.w.Event("change", { bubbles: true }));
+    assert.equal(
+      form.querySelector('[aria-live="polite"]').textContent,
+      "1 tool selected",
+    );
+    click(p.w, "Create agent key");
+    await until(() => !p.w.document.querySelector("#new-key").hidden);
+    assert.deepEqual(p.keyOptions().grants, [{
+      connectionId: initial[0].id,
+      toolIds: ["github_list_pull_requests"],
+    }]);
+    assert.ok(Date.parse(p.keyOptions().expiresAt) > Date.now());
+    assert.equal(p.keys[0].name, "Test agent");
+  } finally {
+    p.close();
+  }
+});
+
+test("An agent key submits optional resource restrictions without granting other accounts", async () => {
+  const p = await page();
+  try {
+    await signIn(p.w);
+    p.w.document.querySelector('[data-view="agents"]').click();
+    const form = p.w.document.querySelector("#agent-scope-editor form");
+    form.querySelector('input[type="checkbox"]').checked = true;
+    const mode = p.w.document.getElementById(
+      `agent-resource-mode-${initial[0].id}`,
+    );
+    assert.equal(mode.value, "inherit");
+    mode.value = "restrict";
+    mode.dispatchEvent(new p.w.Event("change"));
+    const input = p.w.document.getElementById(
+      `agent-resource-${initial[0].id}`,
+    );
+    assert.equal(input.parentElement.hidden, false);
+    assert.equal(
+      form.querySelector(`label[for="${input.id}"]`).textContent,
+      "Allowed repositories",
+    );
+    input.value = "example/project";
+    click(p.w, "Create agent key");
+    await until(() => !p.w.document.querySelector("#new-key").hidden);
+    assert.deepEqual(p.keyOptions().grants, [{
+      connectionId: initial[0].id,
+      toolIds: ["github_list_pull_requests"],
+      resources: { repositories: ["example/project"] },
+    }]);
+  } finally {
+    p.close();
   }
 });

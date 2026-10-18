@@ -118,6 +118,8 @@ async function page(
           endpointUrl: endpoint,
         });
       }
+      if (path === "/v1/access-keys") return Response.json({ keys: [] });
+      if (path === "/v1/vault") return Response.json({ vault: null });
       if (path === "/v1/invitations/preview") {
         return Response.json({
           organization: { id: orgId, name: "Example team" },
@@ -221,6 +223,7 @@ async function page(
     await until(() =>
       w.document.querySelector("#teams-panel")?.hidden === false
     );
+    w.document.querySelector('[data-view="organizations"]').click();
   };
   return { w, state, connection, signIn, close: () => w.close() };
 }
@@ -546,11 +549,13 @@ test("A connection owner can withdraw an existing share after disabling its last
         "Selected tools shared."
     );
     p.connection.enabledTools = [];
+    p.w.document.querySelector('[data-view="connectors"]').click();
     click(p.w, "Refresh accounts");
     await until(() =>
       p.w.document.querySelector("#notice").textContent ===
         "Connections refreshed."
     );
+    p.w.document.querySelector('[data-view="organizations"]').click();
     click(p.w, "Withdraw sharing");
     await until(() => p.state.shares.length === 0);
   } finally {
