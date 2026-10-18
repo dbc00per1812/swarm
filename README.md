@@ -1,5 +1,8 @@
 # swarm
 
+The Swarm application manages agent connections, encrypted vault items, scoped keys, and request history.
+Read [the application guide](docs/application/README.md) for setup, security details, validation, and deployment.
+
 Shared code for the Foundlings agent team: scripts, automations, media generators and small tools.
 
 **This repo is public.** Never commit:

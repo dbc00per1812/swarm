@@ -1,6 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { createTeams } from "./teams.js";
 import { createGmailApprovals } from "./gmail-approvals.js";
+import { createWorkspace } from "./workspace.js";
+import { logo, renderCatalog } from "./catalog.js";
+import { createVault } from "./vault.js";
+import { createAccessKeys } from "./access-keys.js";
+import { createActivity } from "./activity.js";
 import { endpoint } from "./config.js";
 
 const byId = (id) => document.getElementById(id);
@@ -10,18 +15,188 @@ const names = {
   linear: "Linear",
   gmail: "Gmail",
 };
-const descriptions = {
-  github: "Read pull requests from selected public repositories.",
-  slack: "Search messages available to your Slack account.",
-  linear: "Read issues available to your Linear account.",
-  gmail:
-    "Testing app: only approved Google test users can connect. New authorizations can expire after seven days.",
-};
 let auth, config, userId, popup, newKey;
+let currentConnections = [], accessConnections = [];
+let selectedConnectionId, selectedCatalogId, connectorMode = "connected";
+const workspace = createWorkspace(document, {
+  onShow(name, previous) {
+    if (previous === "vault" && name !== "vault") vault.lock?.();
+    if (name === "activity" && userId) activity.mount();
+  },
+});
+const activity = createActivity({
+  api,
+  node,
+  button,
+  getUserId: () => userId,
+  getConnections: () => accessConnections,
+});
+const vault = createVault({
+  api,
+  node,
+  button,
+  message,
+  getUserId: () => userId,
+});
+const accessKeys = createAccessKeys({
+  api,
+  node,
+  button,
+  message,
+  getUserId: () => userId,
+  onIssued(value) {
+    newKey = value;
+    byId("raw-key").value = value.token;
+    byId("new-key").hidden = false;
+  },
+  onRevoked(id) {
+    if (newKey?.id !== id) return;
+    newKey = null;
+    byId("raw-key").value = "";
+    byId("new-key").hidden = true;
+  },
+});
+function browseConnectors() {
+  renderCatalog({
+    target: byId("connector-catalog"),
+    detailTarget: byId("catalog-detail"),
+    node,
+    selectedId: selectedCatalogId,
+    onInspect: (id) => {
+      selectedCatalogId = id;
+    },
+    approvedHosts: config?.customApprovedHosts || [],
+    query: byId("connector-search").value,
+    category: byId("connector-category").value,
+    configured: (config?.services || []).filter((service) => service.configured)
+      .map((service) => service.provider),
+    onSelect: async (item) => {
+      try {
+        if (item.native) {
+          if (
+            !config.services.some((service) =>
+              service.provider === item.id && service.configured
+            )
+          ) {
+            message(
+              `${item.name} requires application setup before you can connect an account.`,
+              true,
+            );
+            return;
+          }
+          const result = await api("/connections", "POST", {
+            kind: "native",
+            provider: item.id,
+            name: `${item.name} account`,
+          });
+          await refresh(result.connection.id);
+          message("Account added. Select Connect to approve access.");
+        } else {
+          byId("custom-setup").open = true;
+          byId("custom-name").value = item.name;
+          byId("custom-url").value = item.endpoint;
+          byId("custom-bearer").value = "";
+          byId("custom-name").focus();
+          const allowed = config.customApprovedHosts.includes(
+            new URL(item.endpoint).hostname,
+          );
+          message(
+            allowed
+              ? `${item.name} selected. Add its authentication, then save the connection.`
+              : `${item.name} requires host approval. Ask the server operator to approve ${
+                new URL(item.endpoint).hostname
+              }.`,
+            !allowed,
+          );
+        }
+      } catch (error) {
+        message(error.message, true);
+      }
+    },
+  });
+  renderConnectionList();
+}
+function setConnectorMode(mode) {
+  connectorMode = mode;
+  byId("connected-accounts").hidden = mode !== "connected";
+  byId("browse-connectors").hidden = mode !== "catalog";
+  byId("show-connected").setAttribute(
+    "aria-pressed",
+    String(mode === "connected"),
+  );
+  byId("show-catalog").setAttribute("aria-pressed", String(mode === "catalog"));
+}
+function selectConnection(id, { focusDetail = false } = {}) {
+  selectedConnectionId = id;
+  for (const row of byId("connection-list").querySelectorAll("button")) {
+    row.setAttribute("aria-pressed", String(row.dataset.connectionId === id));
+  }
+  for (const card of byId("services").querySelectorAll("article.service")) {
+    card.hidden = card.id !== `account-${id}`;
+  }
+  byId("no-account").hidden = Boolean(id);
+  if (focusDetail) document.getElementById(`account-${id}`)?.focus();
+}
+function renderConnectionList() {
+  const list = byId("connection-list");
+  const activeId = document.activeElement?.dataset.connectionId;
+  list.replaceChildren();
+  const query = byId("connector-search").value.trim().toLowerCase();
+  const matches = currentConnections.filter((connection) =>
+    `${connection.name} ${names[connection.provider] || "MCP"} ${
+      connection.accountLabel || ""
+    }`.toLowerCase().includes(query)
+  );
+  byId("account-count").textContent = String(matches.length);
+  if (!matches.some((connection) => connection.id === selectedConnectionId)) {
+    selectedConnectionId = matches[0]?.id;
+  }
+  for (const connection of matches) {
+    const row = button("", () => selectConnection(connection.id), true);
+    row.className = "account-option";
+    row.dataset.connectionId = connection.id;
+    row.setAttribute("aria-controls", `account-${connection.id}`);
+    row.setAttribute(
+      "aria-label",
+      `${names[connection.provider] || "MCP"} · ${connection.name}`,
+    );
+    const copy = node("span", "", "account-option-copy");
+    copy.append(
+      node("strong", connection.name),
+      node("small", names[connection.provider] || "Custom MCP server", "muted"),
+    );
+    row.append(
+      logo(node, connection.provider || "mcp"),
+      copy,
+      node(
+        "span",
+        connection.status === "connected" ? "Connected" : "Set up",
+        "account-option-status",
+      ),
+    );
+    list.append(row);
+  }
+  if (!matches.length) {
+    list.append(node(
+      "p",
+      currentConnections.length
+        ? "No accounts match your search."
+        : "Add your first connector to give an agent access.",
+      "empty-state",
+    ));
+  }
+  selectConnection(selectedConnectionId);
+  if (activeId) {
+    [...list.querySelectorAll("button")].find((row) =>
+      row.dataset.connectionId === activeId
+    )?.focus();
+  }
+}
+
 let generation = 0;
 let refreshSequence = 0;
 let authSequence = 0;
-let keys = [];
+
 const gmailApprovals = createGmailApprovals({
   api,
   node,
@@ -122,12 +297,20 @@ function field(form, label, id, value = "", type = "text") {
 }
 function clearPrivateView() {
   generation++;
+  vault.clear();
+  accessKeys.clear();
+  activity.clear();
+  workspace.show("connectors");
+  currentConnections = [];
+  accessConnections = [];
+  selectedConnectionId = null;
+  byId("connection-list").replaceChildren();
+  document.body.classList.remove("signed-in");
   userId = null;
   teams.clear();
   gmailApprovals.clear();
   cancelGmailConsent?.();
   newKey = null;
-  keys = [];
   if (popup && !popup.closed) popup.close();
   popup = null;
   byId("raw-key").value = "";
@@ -187,123 +370,67 @@ async function api(path, method = "GET", body) {
   }
   return result;
 }
-function keyStorage() {
-  return `swarm-key-ids:${userId}`;
-}
-function saveKeys() {
-  try {
-    localStorage.setItem(keyStorage(), JSON.stringify(keys));
-    return true;
-  } catch {
-    return false;
-  }
-}
-function renderKeys() {
-  byId("keys").replaceChildren();
-  for (const key of keys) {
-    const row = node("div", "", "key-row");
-    row.append(
-      node(
-        "p",
-        `Agent key · ${new Date(key.createdAt).toLocaleString()}`,
-        "muted",
-      ),
-      button("Revoke key", async () => {
-        if (
-          !confirm("Revoke this agent key? Agents using it will lose access.")
-        ) return;
-        await api(`/access-keys/${encodeURIComponent(key.id)}`, "DELETE");
-        keys = keys.filter((item) => item.id !== key.id);
-        const saved = saveKeys();
-        if (newKey?.id === key.id) {
-          newKey = null;
-          byId("raw-key").value = "";
-          byId("new-key").hidden = true;
-        }
-        renderKeys();
-        message(
-          saved
-            ? "Agent key revoked."
-            : "Agent key revoked. The browser key list could not be saved.",
-        );
-        byId("create-key").focus();
-      }, true),
-    );
-    byId("keys").append(row);
-  }
-}
 async function refresh(focusId) {
   const revision = generation;
   const sequence = ++refreshSequence;
   const result = await api("/connections");
   if (revision !== generation || sequence !== refreshSequence) return;
+  currentConnections = result.connections;
+  accessConnections = result.accessConnections || result.connections;
   byId("endpoint").value = result.endpointUrl;
-  byId("services").replaceChildren();
+  byId("services").replaceChildren(...result.connections.map(accountCard));
   byId("empty").hidden = result.connections.length > 0;
-  for (const provider of [...Object.keys(names), "mcp"]) {
-    const group = node("section");
-    const top = node("div", "", "section-heading");
-    top.append(node("h3", names[provider] || "Custom MCP servers"));
-    if (provider !== "mcp") {
-      const configured = config.services.some((s) =>
-        s.provider === provider && s.configured
-      );
-      const add = button(`Add ${names[provider]} account`, async () => {
-        const value = await api("/connections", "POST", {
-          kind: "native",
-          provider,
-          name: `${names[provider]} account`,
-        });
-        await refresh(value.connection.id);
-        message("Account added. Select Connect to approve access.");
-      }, true);
-      if (!configured) {
-        add.setAttribute("aria-disabled", "true");
-        add.title = "Application setup is required.";
-      }
-      top.append(add);
-    }
-    group.append(top);
-    if (descriptions[provider]) {
-      group.append(node("p", descriptions[provider], "muted"));
-    }
-    const grid = node("div", "", "services");
-    for (
-      const connection of result.connections.filter((c) =>
-        (c.provider || "mcp") === provider
-      )
-    ) grid.append(accountCard(connection));
-    group.append(grid);
-    byId("services").append(group);
+  if (focusId) {
+    selectedConnectionId = focusId;
+    setConnectorMode("connected");
   }
+  browseConnectors();
   await teams.refresh(result.connections);
-  if (focusId) document.getElementById(`account-${focusId}`)?.focus();
+  await accessKeys.mount(accessConnections);
+  if (revision !== generation || sequence !== refreshSequence) return;
+  if (focusId) selectConnection(focusId, { focusDetail: true });
 }
+
 function accountCard(connection) {
   const card = node("article", "", "service");
   card.id = `account-${connection.id}`;
   card.tabIndex = -1;
+  const detail = node("div", "", "account-details");
+  const headline = node("div", "", "account-summary");
+  headline.append(logo(node, connection.provider || "mcp"));
+  const identity = node("div", "", "account-identity");
   const title = node("h4", connection.name);
   title.id = `title-${connection.id}`;
   card.setAttribute("aria-labelledby", title.id);
-  card.append(
+  identity.append(
     title,
     node(
       "p",
+      connection.accountLabel || connection.endpointUrl ||
+        (connection.status === "connected"
+          ? `${names[connection.provider] || "MCP"} account`
+          : "Approve access to this account."),
+      "muted account",
+    ),
+  );
+  headline.append(
+    identity,
+    node(
+      "span",
       connection.status === "connected"
         ? "Connected"
         : "Authorization required",
       "status",
     ),
-  );
-  card.append(
     node(
-      "p",
-      connection.accountLabel || connection.endpointUrl ||
-        "Approve access to this account.",
-      "muted account",
+      "span",
+      `${connection.enabledTools.length} ${
+        connection.enabledTools.length === 1 ? "tool" : "tools"
+      }`,
+      "tool-count",
     ),
   );
+  detail.append(headline);
   const actions = node("div", "", "actions");
   if (connection.kind === "native") {
     actions.append(
@@ -389,7 +516,28 @@ function accountCard(connection) {
     message("Connection removed.");
     byId("refresh-accounts").focus();
   }, true));
-  card.append(actions);
+  actions.append(button("Manage agent access", () => {
+    workspace.show("agents");
+    byId("agent-key-name")?.focus();
+  }, true));
+  detail.append(actions);
+  const scopeSummary = node("dl", "", "detail-facts");
+  scopeSummary.append(
+    node("dt", "Access"),
+    node("dd", "Selected tools and resources"),
+  );
+  const scopeValues = connection.settings.repositories ||
+    connection.settings.channels || connection.settings.teams;
+  if (scopeValues) {
+    scopeSummary.append(
+      node("dt", "Resources"),
+      node(
+        "dd",
+        scopeValues.length ? scopeValues.join(", ") : "No resources allowed",
+      ),
+    );
+  }
+  detail.append(scopeSummary);
   const edit = node("details");
   edit.append(node("summary", "Account settings"));
   const form = node("form");
@@ -401,7 +549,7 @@ function accountCard(connection) {
   );
   name.required = true;
   name.maxLength = 100;
-  let repositories, bearer;
+  let repositories, bearer, channels, linearTeams;
   if (connection.provider === "github") {
     repositories = field(
       form,
@@ -411,6 +559,40 @@ function accountCard(connection) {
       "textarea",
     );
     repositories.rows = 3;
+  }
+  if (connection.provider === "slack") {
+    channels = field(
+      form,
+      "Allowed Slack channels (one name per line)",
+      `channels-${connection.id}`,
+      (connection.settings.channels || []).join("\n"),
+      "textarea",
+    );
+    channels.placeholder = "engineering\nproduct";
+    form.append(
+      node(
+        "p",
+        "Only listed channels are allowed after saving. An empty list blocks all Slack searches.",
+        "muted",
+      ),
+    );
+  }
+  if (connection.provider === "linear") {
+    linearTeams = field(
+      form,
+      "Allowed Linear teams (one key per line)",
+      `teams-${connection.id}`,
+      (connection.settings.teams || []).join("\n"),
+      "textarea",
+    );
+    linearTeams.placeholder = "ENG\nPRODUCT";
+    form.append(
+      node(
+        "p",
+        "Only listed team keys are allowed after saving. An empty list blocks all Linear requests.",
+        "muted",
+      ),
+    );
   }
   if (connection.kind === "mcp") {
     bearer = field(
@@ -454,12 +636,20 @@ function accountCard(connection) {
           .filter(Boolean),
       };
     }
+    if (channels || linearTeams) {
+      const input = channels || linearTeams;
+      changes.settings = {
+        [channels ? "channels" : "teams"]: input.value.split(/[\n,]/).map((
+          value,
+        ) => value.trim()).filter(Boolean),
+      };
+    }
     await api(`/connections/${connection.id}`, "PATCH", changes);
     await refresh(connection.id);
     message("Account settings saved.");
   });
   edit.append(form);
-  card.append(edit);
+  detail.append(edit);
   const tools = node("details");
   tools.append(
     node("summary", `Tools · ${connection.enabledTools.length} enabled`),
@@ -495,6 +685,28 @@ function accountCard(connection) {
     toolForm.append(row);
   }
   if (connection.tools.length) {
+    const selection = node("div", "", "actions");
+    for (
+      const [label, checked] of [["Enable all", true], [
+        "Clear selection",
+        false,
+      ]]
+    ) {
+      selection.append(button(label, () => {
+        for (const input of toolForm.querySelectorAll("input[type=checkbox]")) {
+          input.checked = checked;
+        }
+        message("Selection changed. Select Save tools to apply it.");
+      }, true));
+    }
+    toolForm.prepend(
+      node(
+        "p",
+        "Enable all selects every listed tool, including tools that change data. New tools require a new selection.",
+        "muted",
+      ),
+      selection,
+    );
     const saveTools = node("button", "Save tools");
     saveTools.type = "submit";
     toolForm.append(saveTools);
@@ -510,7 +722,8 @@ function accountCard(connection) {
       node("p", "Discover tools before you select them.", "muted"),
     );}
   tools.append(toolForm);
-  card.append(tools);
+  detail.append(tools);
+  card.append(detail);
   return card;
 }
 async function copy(value, success) {
@@ -531,22 +744,15 @@ async function showSession(session) {
   if (userId === session.user.id) return;
   clearPrivateView();
   userId = session.user.id;
-  try {
-    keys = JSON.parse(localStorage.getItem(keyStorage()) || "[]");
-    if (!Array.isArray(keys)) keys = [];
-    keys = keys.filter((k) =>
-      typeof k.id === "string" && typeof k.createdAt === "string"
-    );
-  } catch {
-    keys = [];
-  }
   byId("signin-panel").hidden = true;
   byId("connections-panel").hidden = false;
-  renderKeys();
+  document.body.classList.add("signed-in");
   const revision = generation;
   await refresh();
   if (revision !== generation) return;
   await gmailApprovals.load();
+  if (!byId("gmail-search-review").hidden) workspace.show("connectors");
+  await vault.mount();
   if (revision === generation) message("Connections loaded.");
 }
 async function start() {
@@ -636,29 +842,6 @@ async function start() {
         () => copy(byId("endpoint").value, "MCP address copied."),
       ),
   );
-  byId("create-key").addEventListener(
-    "click",
-    (event) =>
-      busy(event.currentTarget, async () => {
-        if (
-          newKey &&
-          !confirm(
-            "Create another key? Copy the current key before continuing.",
-          )
-        ) return;
-        newKey = await api("/access-keys", "POST");
-        keys.push({ id: newKey.id, createdAt: new Date().toISOString() });
-        const saved = saveKeys();
-        renderKeys();
-        byId("raw-key").value = newKey.token;
-        byId("new-key").hidden = false;
-        message(
-          saved
-            ? "Agent key created. Copy it now and keep it private."
-            : "Agent key created. Browser storage is unavailable. Copy the key, then revoke it before leaving this page.",
-        );
-      }),
-  );
   byId("copy-key").addEventListener(
     "click",
     (event) =>
@@ -722,7 +905,24 @@ async function start() {
     message("Connections refreshed.");
   }, true);
   refreshButton.id = "refresh-accounts";
-  byId("connections-panel").prepend(refreshButton);
+  byId("refresh-slot").append(refreshButton);
+  byId("connector-search").addEventListener("input", browseConnectors);
+  byId("connector-category").addEventListener("change", browseConnectors);
+  byId("show-connected").addEventListener(
+    "click",
+    () => setConnectorMode("connected"),
+  );
+  byId("show-catalog").addEventListener(
+    "click",
+    () => setConnectorMode("catalog"),
+  );
+  byId("add-connector").addEventListener("click", () => {
+    setConnectorMode("catalog");
+    byId("connector-search").value = "";
+    browseConnectors();
+    byId("connector-search").focus();
+  });
+  browseConnectors();
   const { data, error } = await auth.auth.getSession();
   if (location.search.includes("code=") || location.hash) {
     history.replaceState(null, "", location.pathname);

@@ -261,8 +261,16 @@ Deno.test("a failed sharing permission read denies MCP execution", async () => {
   let upstream = 0;
   const fetcher: typeof fetch = (input) => {
     const url = new URL(String(input));
-    if (url.pathname === "/rest/v1/rpc/swarm_user_key_owner") {
-      return Promise.resolve(Response.json(user));
+    if (url.pathname === "/rest/v1/swarm_user_mcp_keys") {
+      return Promise.resolve(Response.json([{
+        id: "44444444-4444-4444-8444-444444444444",
+        user_id: user,
+        name: "Sharing permission fixture",
+        grants: [{
+          connectionId: item,
+          toolIds: ["github_list_pull_requests"],
+        }],
+      }]));
     }
     if (url.pathname === "/rest/v1/swarm_user_connections") {
       return Promise.resolve(Response.json([]));

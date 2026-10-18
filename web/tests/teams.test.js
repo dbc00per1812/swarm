@@ -118,6 +118,8 @@ async function page(
           endpointUrl: endpoint,
         });
       }
+      if (path === "/v1/access-keys") return Response.json({ keys: [] });
+      if (path === "/v1/vault") return Response.json({ vault: null });
       if (path === "/v1/invitations/preview") {
         return Response.json({
           organization: { id: orgId, name: "Example team" },
@@ -221,6 +223,7 @@ async function page(
     await until(() =>
       w.document.querySelector("#teams-panel")?.hidden === false
     );
+    w.document.querySelector('[data-view="organizations"]').click();
   };
   return { w, state, connection, signIn, close: () => w.close() };
 }
@@ -262,6 +265,44 @@ test("An invitation survives sign-in and reload but joins only after explicit ac
     );
     click(p.w, "Leave organization");
     await until(() => p.state.removed);
+  } finally {
+    p.close();
+  }
+});
+
+test("An owner selects all enabled tools, including writes, and saves or clears sharing", async () => {
+  const p = await page();
+  try {
+    p.connection.enabledTools = ["read", "write"];
+    p.connection.tools.push({ id: "disabled", name: "Disabled tool" });
+    await p.signIn();
+    p.w.document.querySelector("#organization-name").value = "Example team";
+    send(p.w, p.w.document.querySelector("#organization-form"));
+    await until(() => p.w.document.querySelector("form.share-tools"));
+    const form = () => p.w.document.querySelector("form.share-tools");
+    click(p.w, "Share all", form());
+    const all = [...form().querySelectorAll("input[type=checkbox]")];
+    assert.deepEqual(all.map((input) => input.value), ["read", "write"]);
+    assert.ok(all.every((input) => input.checked));
+    assert.equal(
+      [...form().querySelectorAll("button")].find((b) =>
+        b.textContent === "Share all"
+      ).type,
+      "button",
+    );
+    assert.deepEqual(p.state.shares, []);
+    send(p.w, form());
+    await until(() =>
+      p.state.shares.length === 1 &&
+      p.w.document.querySelector("#notice").textContent ===
+        "Selected tools shared."
+    );
+    assert.deepEqual(p.state.shares[0].toolIds, ["read", "write"]);
+    click(p.w, "Clear selection", form());
+    assert.equal(form().querySelectorAll("input:checked").length, 0);
+    assert.equal(p.state.shares.length, 1);
+    send(p.w, form());
+    await until(() => p.state.shares.length === 0);
   } finally {
     p.close();
   }
@@ -508,11 +549,13 @@ test("A connection owner can withdraw an existing share after disabling its last
         "Selected tools shared."
     );
     p.connection.enabledTools = [];
+    p.w.document.querySelector('[data-view="connectors"]').click();
     click(p.w, "Refresh accounts");
     await until(() =>
       p.w.document.querySelector("#notice").textContent ===
         "Connections refreshed."
     );
+    p.w.document.querySelector('[data-view="organizations"]').click();
     click(p.w, "Withdraw sharing");
     await until(() => p.state.shares.length === 0);
   } finally {

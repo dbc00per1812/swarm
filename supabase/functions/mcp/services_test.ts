@@ -192,3 +192,81 @@ Deno.test("valid Gmail refresh credentials recover access when a manual token ex
   );
   assertEquals(result.isError, undefined);
 });
+
+Deno.test("Slack channel scope blocks an empty scope and removes outside results", async () => {
+  const denied = await call(
+    { slackToken: "fixture", slackChannels: [] },
+    "slack_search",
+    { query: "budget" },
+    () => {
+      throw new Error("Empty grants must make no request");
+    },
+  );
+  assertEquals(denied.isError, true);
+  const scoped = await call(
+    { slackToken: "fixture", slackChannels: ["engineering"] },
+    "slack_search",
+    { query: "in:finance OR budget" },
+    (input) => {
+      const query = new URL(input).searchParams.get("query")!;
+      assertStringIncludes(query, "in:engineering");
+      return Promise.resolve(Response.json({
+        ok: true,
+        messages: {
+          matches: [
+            { text: "Allowed", ts: "1", channel: { name: "engineering" } },
+            { text: "Outside secret", ts: "2", channel: { name: "finance" } },
+          ],
+        },
+      }));
+    },
+  );
+  assertStringIncludes(JSON.stringify(scoped), "Allowed");
+  assertEquals(JSON.stringify(scoped).includes("Outside secret"), false);
+});
+
+Deno.test("Linear team scope refuses another team before any request", async () => {
+  const denied = await call(
+    { linearToken: "fixture", linearTeams: ["ENG"] },
+    "linear_list_issues",
+    { team: "FIN" },
+    () => {
+      throw new Error("Another team must make no request");
+    },
+  );
+  assertEquals(denied.isError, true);
+  const scoped = await call(
+    { linearToken: "fixture", linearTeams: ["ENG"] },
+    "linear_list_issues",
+    {},
+    (_input, init) => {
+      assertEquals(JSON.parse(String(init?.body)).variables.filter, {
+        team: { key: { in: ["ENG"] } },
+      });
+      return Promise.resolve(Response.json({
+        data: {
+          issues: {
+            nodes: [
+              {
+                identifier: "ENG-1",
+                title: "Allowed",
+                url: "https://linear.app/issue/ENG-1",
+                state: null,
+                team: { key: "ENG" },
+              },
+              {
+                identifier: "FIN-1",
+                title: "Outside secret",
+                url: "https://linear.app/issue/FIN-1",
+                state: null,
+                team: { key: "FIN" },
+              },
+            ],
+          },
+        },
+      }));
+    },
+  );
+  assertStringIncludes(JSON.stringify(scoped), "ENG-1");
+  assertEquals(JSON.stringify(scoped).includes("Outside secret"), false);
+});
